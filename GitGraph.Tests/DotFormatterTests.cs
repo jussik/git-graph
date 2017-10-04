@@ -14,6 +14,7 @@ namespace GitGraph.Tests
 			{
 				DotFormatter.ToDigraphAsync(commits.Values, sw).Wait();
 				Assert.That(sw.ToString(), Is.EqualTo(@"digraph {
+rankdir=LR
 1 -> 2 -> 4 -> 5 -> 7
 2 -> 3 -> 6
 3 -> 5

@@ -40,6 +40,7 @@ namespace GitGraph
 			}
 
 			await stream.WriteLineAsync("digraph {");
+			await stream.WriteLineAsync("rankdir=LR");
 			while (queue.TryDequeue(out var pair))
 			{
 				line.Clear();
