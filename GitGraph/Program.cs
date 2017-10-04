@@ -1,12 +1,11 @@
-﻿using System;
-
-namespace GitGraph
+﻿namespace GitGraph
 {
-    class Program
-    {
-        static void Main(string[] args)
-        {
-            Console.WriteLine("Hello World!");
-        }
-    }
+	public static class Program
+	{
+		public static void Main()
+		{
+			var processor = new GraphProcessor(new Git());
+			var commits = processor.GetCommits();
+		}
+	}
 }

@@ -5,6 +5,8 @@ VisualStudioVersion = 15.0.26730.16
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GitGraph", "GitGraph\GitGraph.csproj", "{789905A9-CE58-49B0-AFF7-A771CD403FBA}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GitGraph.Tests", "GitGraph.Tests\GitGraph.Tests.csproj", "{C1C19F84-46CD-4535-98C5-C14B89FF8C30}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{789905A9-CE58-49B0-AFF7-A771CD403FBA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{789905A9-CE58-49B0-AFF7-A771CD403FBA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{789905A9-CE58-49B0-AFF7-A771CD403FBA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C1C19F84-46CD-4535-98C5-C14B89FF8C30}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C1C19F84-46CD-4535-98C5-C14B89FF8C30}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C1C19F84-46CD-4535-98C5-C14B89FF8C30}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C1C19F84-46CD-4535-98C5-C14B89FF8C30}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
