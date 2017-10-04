@@ -5,7 +5,7 @@
 		public static void Main()
 		{
 			var processor = new GraphProcessor(new Git());
-			var commits = processor.GetCommits();
+			var commits = processor.GetRepository();
 		}
 	}
 }

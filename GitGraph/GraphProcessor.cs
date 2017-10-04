@@ -15,17 +15,20 @@ namespace GitGraph
 			this.git = git;
 		}
 
-		public Dictionary<BigInteger, Commit> GetCommits()
+		public Repository GetRepository()
 		{
-			var branches = GetBranches();
-			var tags = GetTags();
+			var branches = GetRefs(git.GetBranches());
+			var tags = GetRefs(git.GetTags());
+
+			var branchLookup = GetRefLookup(branches);
+			var tagLookup = GetRefLookup(tags);
 			var map = git.GetCommits()
 				.Select(line =>
 				{
 					var ids = line.Split(' ').Select(str => BigInteger.Parse(str, NumberStyles.HexNumber)).ToArray();
 					return new
 					{
-						node = new Commit(ids[0], branches, tags),
+						node = new Commit(ids[0], branchLookup, tagLookup),
 						ids
 					};
 				})
@@ -46,26 +49,35 @@ namespace GitGraph
 				commit.node.Parent = ApplyNode(commit.node, commit.ids, 1);
 				commit.node.MergeParent = ApplyNode(commit.node, commit.ids, 2);
 			}
-			return map.ToDictionary(m => m.Key, m => m.Value.node);
+
+			var commits =  map.ToDictionary(m => m.Key, m => m.Value.node);
+			return new Repository
+			{
+				CommitsById = commits,
+				BranchesByName = branches.ToDictionary(r => r.name, r => commits[r.commitId]),
+				TagsByName = tags.ToDictionary(r => r.name, r => commits[r.commitId]),
+				BranchesById = branchLookup,
+				TagsById = tagLookup
+			};
 		}
 
-		private ILookup<BigInteger, string> GetTags() => GetRefs(git.GetTags());
-		private ILookup<BigInteger, string> GetBranches() => GetRefs(git.GetBranches());
-
-		private ILookup<BigInteger, string> GetRefs(IEnumerable<string> refs)
+		private List<(string name, BigInteger commitId)> GetRefs(IEnumerable<string> refs)
 		{
 			return refs.Select(line =>
-				{
-					var spIx = line.IndexOf(' ');
-					if (spIx == -1)
-						throw new NotSupportedException("Invalid ref syntax: " + line);
-					return new
-					{
-						commitId = BigInteger.Parse(line.Substring(0, spIx), NumberStyles.HexNumber),
-						name = line.Substring(spIx + 1)
-					};
-				})
-				.ToLookup(r => r.commitId, r => r.name);
+			{
+				var spIx = line.IndexOf(' ');
+				if (spIx == -1)
+					throw new NotSupportedException("Invalid ref syntax: " + line);
+				return (
+					line.Substring(spIx + 1),
+					BigInteger.Parse(line.Substring(0, spIx), NumberStyles.HexNumber)
+				);
+			})
+			.ToList();
+		}
+		private ILookup<BigInteger, string> GetRefLookup(IEnumerable<(string name, BigInteger commitId)> refs)
+		{
+			return refs.ToLookup(r => r.commitId, r => r.name);
 		}
 	}
 }

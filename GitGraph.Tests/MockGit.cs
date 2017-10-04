@@ -21,7 +21,7 @@ namespace GitGraph.Tests
 		public IEnumerable<string> GetBranches()
 		{
 			return Split(@"
-7 main-branch
+7 master
 6 other-branch
 ");
 		}

@@ -8,13 +8,35 @@ namespace GitGraph
 {
     public static class DotFormatter
     {
-		public static async Task ToDigraphAsync(IEnumerable<Commit> commits, TextWriter stream)
+		public static async Task ToDigraphAsync(Repository repo, TextWriter stream)
 		{
-			var queue = new Queue<(Commit parent, Commit commit)>(commits
+			var queue = new Queue<(Commit parent, Commit commit)>(repo.CommitsById.Values
 				.Where(c => c.Parent == null)
 				.SelectMany(parent => parent.ChildCommits.Select(commit => (parent, commit))));
 			var visited = new HashSet<Commit>();
 			var line = new StringBuilder();
+			var labels = new Dictionary<Commit, string>();
+
+			string FormatCommit(Commit commit)
+			{
+				var id = commit.Id.ToString("x");
+
+				if ((commit.Branches.Length > 0 || commit.Tags.Length > 0) && !labels.ContainsKey(commit))
+				{
+					string label = id;
+					if (commit.Branches.Length > 0)
+					{
+						label += "\\n" + string.Join("\\n", commit.Branches);
+					}
+					if (commit.Tags.Length > 0)
+					{
+						label += "\\n<" + string.Join(", ", commit.Tags) + ">";
+					}
+					labels[commit] = $"{id} [label=\"{label}\"]";
+				}
+
+				return id;
+			}
 
 			void ProcessChildren(Commit parent)
 			{
@@ -28,7 +50,7 @@ namespace GitGraph
 
 					Commit commit = children.Current;
 					line.Append(" -> ");
-					line.Append(commit.Id.ToString("x"));
+					line.Append(FormatCommit(commit));
 
 					while (children.MoveNext())
 					{
@@ -41,16 +63,23 @@ namespace GitGraph
 
 			await stream.WriteLineAsync("digraph {");
 			await stream.WriteLineAsync("rankdir=LR");
+
 			while (queue.TryDequeue(out var pair))
 			{
 				line.Clear();
-				line.Append(pair.parent.Id.ToString("x"));
+				line.Append(FormatCommit(pair.parent));
 				line.Append(" -> ");
-				line.Append(pair.commit.Id.ToString("x"));
+				line.Append(FormatCommit(pair.commit));
 
 				ProcessChildren(pair.commit);
 				await stream.WriteLineAsync(line.ToString());
 			}
+
+			foreach (var label in labels.Values)
+			{
+				await stream.WriteLineAsync(label);
+			}
+
 			await stream.WriteLineAsync("}");
 		}
     }

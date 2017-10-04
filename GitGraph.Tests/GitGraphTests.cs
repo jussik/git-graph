@@ -9,14 +9,14 @@ namespace GitGraph.Tests
 	    [Test]
 	    public void TestCommitCount()
 	    {
-		    var commits = new GraphProcessor(new MockGit()).GetCommits();
+		    var commits = new GraphProcessor(new MockGit()).GetRepository().CommitsById;
 			Assert.That(commits.Count, Is.EqualTo(7));
 		}
 
 	    [Test]
 	    public void TestChildCommits()
 	    {
-		    var commits = new GraphProcessor(new MockGit()).GetCommits();
+		    var commits = new GraphProcessor(new MockGit()).GetRepository().CommitsById;
 
 		    Assert.That(
 			    commits[1].ChildCommits.Select(c => (int) c.Id),
@@ -34,15 +34,15 @@ namespace GitGraph.Tests
 		[Test]
 		public void TestBranches()
 		{
-			var commits = new GraphProcessor(new MockGit()).GetCommits();
-			Assert.That(commits[7].Branches, Is.EqualTo(new[] {"main-branch"}));
+			var commits = new GraphProcessor(new MockGit()).GetRepository().CommitsById;
+			Assert.That(commits[7].Branches, Is.EqualTo(new[] {"master"}));
 			Assert.That(commits[6].Branches, Is.EqualTo(new[] {"other-branch"}));
 		}
 
 	    [Test]
 	    public void TestTags()
 	    {
-		    var commits = new GraphProcessor(new MockGit()).GetCommits();
+		    var commits = new GraphProcessor(new MockGit()).GetRepository().CommitsById;
 		    Assert.That(commits[5].Tags, Is.EqualTo(new[] {"merged"}));
 		    Assert.That(commits[1].Tags, Is.EqualTo(new[] {"initial"}));
 	    }
@@ -55,7 +55,7 @@ namespace GitGraph.Tests
 				.DefaultIfEmpty()
 				.Max();
 
-		    var commits = new GraphProcessor(new MockGit()).GetCommits();
+		    var commits = new GraphProcessor(new MockGit()).GetRepository().CommitsById;
 		    Assert.That(GetMaxDepth(commits[1]), Is.EqualTo(5));
 	    }
 	}
