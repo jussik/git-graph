@@ -8,7 +8,7 @@ namespace GitGraph
 {
     public static class DotFormatter
     {
-		public static async Task ToDigraphAsync(Repository repo, TextWriter stream)
+		public static async Task ToDigraphAsync(Repository repo, TextWriter stream, bool includeTags)
 		{
 			var queue = new Queue<(Commit parent, Commit commit)>(repo.CommitsById.Values
 				.Where(c => c.Parent == null)
@@ -19,20 +19,22 @@ namespace GitGraph
 
 			string FormatCommit(Commit commit)
 			{
-				var id = commit.Id.ToString("x");
+				var id = '"' + commit.Id.ToString("x") + '"';
 
 				if ((commit.Branches.Length > 0 || commit.Tags.Length > 0) && !labels.ContainsKey(commit))
 				{
-					string label = id;
+					string label = null;
 					if (commit.Branches.Length > 0)
 					{
-						label += "\\n" + string.Join("\\n", commit.Branches);
+						label = string.Join("\\n", commit.Branches);
 					}
-					if (commit.Tags.Length > 0)
+					if (includeTags && commit.Tags.Length > 0)
 					{
-						label += "\\n<" + string.Join(", ", commit.Tags) + ">";
+						if (label != null)
+							label += "\\n";
+						label += "<" + string.Join(", ", commit.Tags) + ">";
 					}
-					labels[commit] = $"{id} [label=\"{label}\"]";
+					labels[commit] = label != null ? $"{id} [shape=box, label=\"{label}\"]" : null;
 				}
 
 				return id;
@@ -63,9 +65,13 @@ namespace GitGraph
 
 			await stream.WriteLineAsync("digraph {");
 			await stream.WriteLineAsync("rankdir=LR");
+			await stream.WriteLineAsync("node [width=0.1, height=0.1, shape=point, fontsize=10]");
+			await stream.WriteLineAsync("edge [arrowhead=none]");
 
+			int groupNum = 0;
 			while (queue.TryDequeue(out var pair))
 			{
+				await stream.WriteLineAsync($"node [group={++groupNum}]");
 				line.Clear();
 				line.Append(FormatCommit(pair.parent));
 				line.Append(" -> ");
@@ -77,7 +83,8 @@ namespace GitGraph
 
 			foreach (var label in labels.Values)
 			{
-				await stream.WriteLineAsync(label);
+				if(label != null)
+					await stream.WriteLineAsync(label);
 			}
 
 			await stream.WriteLineAsync("}");

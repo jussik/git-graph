@@ -7,20 +7,27 @@ namespace GitGraph
 {
 	public class Git : IGit
 	{
+		private readonly string workingDirectory;
+
+		public Git(string workingDirectory)
+		{
+			this.workingDirectory = workingDirectory;
+		}
+
 		public IEnumerable<string> GetCommits() => GetLines("rev-list --remotes --parents");
 		public IEnumerable<string> GetTags() => GetRefs("refs/tags");
 		public IEnumerable<string> GetBranches() => GetRefs("refs/remotes/origin");
 
-		private static IEnumerable<string> GetRefs(string type) => GetLines("for-each-ref --format='%(objectname) %(refname:short)'" + type);
+		private IEnumerable<string> GetRefs(string type) => GetLines("for-each-ref --format=\"%(objectname) %(refname:short)\" " + type);
 
-		private static IEnumerable<string> GetLines(string command)
+		private IEnumerable<string> GetLines(string command)
 		{
 			var p = new Process
 			{
-				StartInfo = new ProcessStartInfo("git.exe", command)
+				StartInfo = new ProcessStartInfo("git", command)
 				{
 					RedirectStandardOutput = true,
-					WorkingDirectory = Environment.CurrentDirectory,
+					WorkingDirectory = workingDirectory,
 					UseShellExecute = false,
 					StandardOutputEncoding = Encoding.UTF8
 				}
