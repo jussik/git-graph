@@ -1,93 +1,100 @@
 ﻿using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Numerics;
 
 namespace GitGraph
 {
     public static class DotFormatter
     {
-		public static async Task ToDigraphAsync(Repository repo, TextWriter stream, bool includeTags)
-		{
-			var queue = new Queue<(Commit parent, Commit commit)>(repo.Commits
-				.Where(c => c.Parent == null)
-				.SelectMany(parent => parent.ChildCommits.Select(commit => (parent, commit))));
-			var visited = new HashSet<Commit>();
-			var line = new StringBuilder();
-			var labels = new Dictionary<Commit, string>();
+	    public static void ToDigraph(IReadOnlyCollection<Ref> refs, TextWriter stream)
+	    {
+		    stream.WriteLine("digraph {");
+		    stream.WriteLine("rankdir=LR");
+		    stream.WriteLine("node [width=0.1, height=0.1, shape=point, fontsize=10]");
+		    stream.WriteLine("edge [arrowhead=none]");
 
-			string FormatCommit(Commit commit)
+			IEnumerable<(Commit parent, Commit child)> GetCommitPairs(Ref r)
 			{
-				var id = '"' + commit.Id.ToString("x") + '"';
+				if (r.Commit.Parent != null)
+					yield return (r.Commit.Parent, r.Commit);
+				if (r.Commit.MergeParent != null)
+					yield return (r.Commit.MergeParent, r.Commit);
+			}
 
-				if ((commit.Branches.Length > 0 || commit.Tags.Length > 0) && !labels.ContainsKey(commit))
+		    var processed = new HashSet<BigInteger>();
+			var queue = new Queue<(Commit parent, Commit child)>(GraphOptimiser.GetUnmergedRefs(refs).SelectMany(GetCommitPairs));
+
+			// commit chains
+			int group = 0;
+			while(queue.TryDequeue(out var commitPair))
+			{
+				stream.Write("node [group=");
+				stream.Write(++group);
+				stream.WriteLine("]");
+
+				var firstParents = new List<Commit> {commitPair.child, commitPair.parent};
+				if (commitPair.parent.MergeParent != null)
+					queue.Enqueue((commitPair.parent.MergeParent, commitPair.parent));
+
+				Commit commit = commitPair.parent;
+				while (!processed.Contains(commit.Id) && (commit = commit.Parent) != null)
 				{
-					string label = null;
-					if (commit.Branches.Length > 0)
-					{
-						label = string.Join("\\n", commit.Branches);
-					}
-					if (includeTags && commit.Tags.Length > 0)
-					{
-						if (label != null)
-							label += "\\n";
-						label += "<" + string.Join(", ", commit.Tags) + ">";
-					}
-					labels[commit] = label != null ? $"{id} [shape=none, label=\"{label}\"]" : null;
+					firstParents.Add(commit);
+
+					if (processed.Contains(commit.Id))
+						break;
+
+					if (commit.MergeParent != null)
+						queue.Enqueue((commit.MergeParent, commit));
 				}
 
-				return id;
-			}
-
-			void ProcessChildren(Commit parent)
-			{
-				if (!visited.Add(parent))
-					return;
-
-				using (var children = parent.ChildCommits.GetEnumerator())
+				AppendCommit(firstParents[firstParents.Count - 1], stream);
+				for (int i = firstParents.Count - 2; i >= 0; --i)
 				{
-					if (!children.MoveNext())
-						return;
-
-					Commit commit = children.Current;
-					line.Append(" -> ");
-					line.Append(FormatCommit(commit));
-
-					while (children.MoveNext())
-					{
-						queue.Enqueue((parent, children.Current));
-					}
-
-					ProcessChildren(commit);
+					stream.Write(" -> ");
+					AppendCommit(firstParents[i], stream);
 				}
+				stream.WriteLine();
+
+				processed.UnionWith(firstParents.Select(l => l.Id));
 			}
 
-			await stream.WriteLineAsync("digraph {");
-			await stream.WriteLineAsync("rankdir=LR");
-			await stream.WriteLineAsync("node [width=0.1, height=0.1, shape=point, fontsize=10]");
-			await stream.WriteLineAsync("edge [arrowhead=none]");
-
-			int groupNum = 0;
-			while (queue.TryDequeue(out var pair))
+			// ref labels
+			Dictionary<BigInteger, IEnumerable<Ref>> refsById = refs
+				.GroupBy(r => r.Commit.Id)
+				.ToDictionary(g => g.Key, g => (IEnumerable<Ref>)g);
+			foreach (Ref r in refs)
 			{
-				await stream.WriteLineAsync($"node [group={++groupNum}]");
-				line.Clear();
-				line.Append(FormatCommit(pair.parent));
-				line.Append(" -> ");
-				line.Append(FormatCommit(pair.commit));
+				if (!refsById.TryGetValue(r.Commit.Id, out IEnumerable<Ref> commitRefs))
+					continue; // already processed this commit
 
-				ProcessChildren(pair.commit);
-				await stream.WriteLineAsync(line.ToString());
+				AppendCommit(r.Commit, stream);
+				stream.Write(" [shape=none, label=\"");
+				refsById.Remove(r.Commit.Id);
+				using (IEnumerator<Ref> crefs = commitRefs.GetEnumerator())
+				{
+					if (crefs.MoveNext())
+					{
+						stream.Write(crefs.Current);
+						while (crefs.MoveNext())
+						{
+							stream.Write("\\n");
+							stream.Write(crefs.Current);
+						}
+					}
+				}
+				stream.WriteLine("\"]");
 			}
 
-			foreach (var label in labels.Values)
-			{
-				if(label != null)
-					await stream.WriteLineAsync(label);
-			}
-
-			await stream.WriteLineAsync("}");
+			stream.WriteLine("}");
 		}
-    }
+
+	    private static void AppendCommit(Commit commit, TextWriter stream)
+	    {
+		    stream.Write('"');
+		    stream.Write(commit);
+		    stream.Write('"');
+		}
+	}
 }

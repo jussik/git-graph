@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using NUnit.Framework;
 
 namespace GitGraph.Tests
@@ -9,54 +10,76 @@ namespace GitGraph.Tests
 	    [Test]
 	    public void TestCommitCount()
 	    {
-		    var commits = new GraphProcessor(new MockGit()).GetRepository().Commits;
-			Assert.That(commits.Count, Is.EqualTo(7));
+		    var commits = new RepositoryImporter(new MockGit()).GetRepository().CommitsById;
+			Assert.That(commits.Values.Count, Is.EqualTo(7));
 		}
 
 	    [Test]
-	    public void TestChildCommits()
+	    public void TestParentCommits()
 	    {
-		    var commits = new GraphProcessor(new MockGit()).GetRepository().Commits;
+		    var commits = new RepositoryImporter(new MockGit()).GetRepository().CommitsById;
 
 		    Assert.That(
-			    commits[1].ChildCommits.Select(c => (int) c.Id),
-			    Is.EquivalentTo(new[] {2}));
+			    commits[1].Parent,
+			    Is.Null);
+		    Assert.That(
+			    commits[1].MergeParent,
+			    Is.Null);
+
+			Assert.That(
+			    commits[5].Parent,
+			    Is.EqualTo(commits[4]));
+		    Assert.That(
+			    commits[5].MergeParent,
+			    Is.EqualTo(commits[3]));
 
 		    Assert.That(
-			    commits[3].ChildCommits.Select(c => (int) c.Id),
-			    Is.EquivalentTo(new[] {5, 6}));
-
+			    commits[2].Parent,
+			    Is.EqualTo(commits[1]));
 		    Assert.That(
-			    commits[6].ChildCommits,
-			    Is.Empty);
+			    commits[2].MergeParent,
+			    Is.Null);
 		}
 
 		[Test]
 		public void TestBranches()
 		{
-			var commits = new GraphProcessor(new MockGit()).GetRepository().CommitsById;
-			Assert.That(commits[7].Branches, Is.EqualTo(new[] {"master"}));
-			Assert.That(commits[6].Branches, Is.EqualTo(new[] {"other-branch"}));
+			var repo = new RepositoryImporter(new MockGit()).GetRepository();
+
+			var master = repo.Refs.FirstOrDefault(r => r.Name == "master");
+			Assert.That(master, Is.Not.Null);
+			Assert.That(master.Type, Is.EqualTo(Ref.RefType.Branch));
+			Assert.That((int)master.Commit.Id, Is.EqualTo(7));
+
+			var other = repo.Refs.FirstOrDefault(r => r.Name == "other-branch");
+			Assert.That(other, Is.Not.Null);
+			Assert.That(other.Type, Is.EqualTo(Ref.RefType.Branch));
+			Assert.That((int)other.Commit.Id, Is.EqualTo(6));
 		}
 
 	    [Test]
 	    public void TestTags()
-	    {
-		    var commits = new GraphProcessor(new MockGit()).GetRepository().CommitsById;
-		    Assert.That(commits[5].Tags, Is.EqualTo(new[] {"merged"}));
-		    Assert.That(commits[1].Tags, Is.EqualTo(new[] {"initial"}));
+		{
+			var repo = new RepositoryImporter(new MockGit()).GetRepository();
+
+			var merged = repo.Refs.FirstOrDefault(r => r.Name == "merged");
+			Assert.That(merged, Is.Not.Null);
+			Assert.That(merged.Type, Is.EqualTo(Ref.RefType.Tag));
+			Assert.That((int)merged.Commit.Id, Is.EqualTo(5));
+
+			var initial = repo.Refs.FirstOrDefault(r => r.Name == "initial");
+			Assert.That(initial, Is.Not.Null);
+			Assert.That(initial.Type, Is.EqualTo(Ref.RefType.Tag));
+			Assert.That((int)initial.Commit.Id, Is.EqualTo(1));
 	    }
 
 		[Test]
 	    public void TestCommitDepth()
-	    {
-		    int GetMaxDepth(Commit commit) => 1 + commit.ChildCommits
-				.Select(GetMaxDepth)
-				.DefaultIfEmpty()
-				.Max();
+		{
+			int GetDepth(Commit commit) => commit != null ? 1 + Math.Max(GetDepth(commit.Parent), GetDepth(commit.MergeParent)) : 0;
 
-		    var commits = new GraphProcessor(new MockGit()).GetRepository().CommitsById;
-		    Assert.That(GetMaxDepth(commits[1]), Is.EqualTo(5));
+		    var repo = new RepositoryImporter(new MockGit()).GetRepository();
+		    Assert.That(repo.Refs.Max(r => GetDepth(r.Commit)), Is.EqualTo(5));
 	    }
 	}
 }

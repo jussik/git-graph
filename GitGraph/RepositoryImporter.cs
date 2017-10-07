@@ -6,62 +6,72 @@ using System.Numerics;
 
 namespace GitGraph
 {
-	public class GraphProcessor
+	public class RepositoryImporter
 	{
 		private readonly IGit git;
 
-		public GraphProcessor(IGit git)
+		public RepositoryImporter(IGit git)
 		{
 			this.git = git;
 		}
 
 		public Repository GetRepository()
 		{
-			ILookup<BigInteger, string> branchLookup = GetRefLookup(git.GetBranches());
-			ILookup<BigInteger, string> tagLookup = GetRefLookup(git.GetTags());
-			List<(Commit node, BigInteger[] ids)> commits = git.GetCommits()
-				.Select(line =>
-				{
-					BigInteger[] ids = line.Split(' ')
-						.Select(str => BigInteger.Parse(str, NumberStyles.HexNumber))
-						.ToArray();
-					return (node: new Commit(ids[0], branchLookup, tagLookup), ids);
-				})
+			List<BigInteger[]> commits = git.GetCommits()
+				.Select(line => line.Split(' ')
+					.Select(str => BigInteger.Parse(str, NumberStyles.HexNumber))
+					.ToArray())
 				.ToList();
 
-			Dictionary<BigInteger, (Commit node, BigInteger[] ids)> map = commits.ToDictionary(c => c.node.Id);
+			ILookup<BigInteger, BigInteger[]> childLookup = commits
+				.SelectMany(c => c.Skip(1).Select(p => (parent: p, commit: c)))
+				.ToLookup(t => t.parent, t => t.commit);
+			var commitMap = new Dictionary<BigInteger, Commit>();
+			var remainingCommits = new Queue<BigInteger[]>();
 
-			Commit ApplyNode(Commit commit, BigInteger[] ids, int ix)
+			void ProcessCommit(Commit commit)
 			{
-				if (ids.Length < ix + 1)
-					return null;
-				Commit parent = map.TryGetValue(ids[ix], out var c) ? c.node
-					: throw new InvalidOperationException("No such commit " + ids[ix]);
-				parent.ChildCommits.Add(commit);
-				return parent;
+				if (!commitMap.TryAdd(commit.Id, commit))
+					return;
+
+				foreach (BigInteger[] childCommit in childLookup[commit.Id])
+				{
+					remainingCommits.Enqueue(childCommit);
+				}
 			}
 
-			foreach ((Commit node, BigInteger[] ids) pair in commits)
+			foreach (BigInteger[] root in commits.Where(c => c.Length == 1))
 			{
-				pair.node.Parent = ApplyNode(pair.node, pair.ids, 1);
-				pair.node.MergeParent = ApplyNode(pair.node, pair.ids, 2);
+				ProcessCommit(new Commit(root[0]));
+			}
+			while (remainingCommits.TryDequeue(out BigInteger[] ids))
+			{
+				Commit mergeParent = null;
+				if (commitMap.TryGetValue(ids[1], out Commit parent)
+					&& (ids.Length < 3 || commitMap.TryGetValue(ids[2], out mergeParent)))
+					ProcessCommit(new Commit(ids[0], parent, mergeParent));
+				else
+					remainingCommits.Enqueue(ids);
 			}
 
-			return new Repository(commits.Select(c => map[c.ids[0]].node));
+			IEnumerable<Ref> branches = GetRefs(git.GetBranches(), Ref.RefType.Branch, commitMap);
+			IEnumerable<Ref> tags = GetRefs(git.GetTags(), Ref.RefType.Tag, commitMap);
+
+			return new Repository(branches.Concat(tags));
 		}
 
-		private static ILookup<BigInteger, string> GetRefLookup(IEnumerable<string> refs)
+		private static IEnumerable<Ref> GetRefs(IEnumerable<string> refs, Ref.RefType refType, Dictionary<BigInteger, Commit> commits)
 		{
 			return refs.Select(line =>
 			{
 				int spIx = line.IndexOf(' ');
 				if (spIx == -1)
 					throw new NotSupportedException("Invalid ref syntax: " + line);
-				return (
-					name: line.Substring(spIx + 1),
-					id: BigInteger.Parse(line.Substring(0, spIx), NumberStyles.HexNumber)
-				);
-			}).ToLookup(r => r.id, r => r.name);
+				return new Ref(
+					line.Substring(spIx + 1),
+					refType,
+					commits[BigInteger.Parse(line.Substring(0, spIx), NumberStyles.HexNumber)]);
+			});
 		}
 	}
 }

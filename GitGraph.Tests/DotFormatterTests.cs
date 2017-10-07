@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using NUnit.Framework;
 
 namespace GitGraph.Tests
@@ -10,10 +11,10 @@ namespace GitGraph.Tests
 	    [Test]
 	    public void TestDigraph()
 	    {
-		    var repo = new GraphProcessor(new MockGit()).GetRepository();
+		    var repo = new RepositoryImporter(new MockGit()).GetRepository();
 		    using (StringWriter sw = new StringWriter())
 			{
-				DotFormatter.ToDigraphAsync(repo, sw, true).Wait();
+				DotFormatter.ToDigraph(repo.Refs, sw);
 				Console.WriteLine(sw.ToString());
 				Assert.That(sw.ToString(), Is.EqualTo(@"
 digraph {
@@ -26,10 +27,10 @@ node [group=2]
 ""2"" -> ""3"" -> ""6""
 node [group=3]
 ""3"" -> ""5""
-""1"" [shape=none, label=""<initial>""]
-""5"" [shape=none, label=""<merged>""]
 ""7"" [shape=none, label=""master""]
 ""6"" [shape=none, label=""other-branch""]
+""5"" [shape=none, label=""<merged>""]
+""1"" [shape=none, label=""<initial>""]
 }
 ".TrimStart()));
 			}
@@ -38,10 +39,10 @@ node [group=3]
 	    [Test]
 	    public void TestDigraphNoTags()
 	    {
-		    var repo = new GraphProcessor(new MockGit()).GetRepository();
+		    var repo = new RepositoryImporter(new MockGit()).GetRepository();
 		    using (StringWriter sw = new StringWriter())
 		    {
-			    DotFormatter.ToDigraphAsync(repo, sw, false).Wait();
+			    DotFormatter.ToDigraph(repo.Refs.Where(r => r.Type != Ref.RefType.Tag).ToList(), sw);
 				Console.WriteLine(sw.ToString());
 			    Assert.That(sw.ToString(), Is.EqualTo(@"
 digraph {

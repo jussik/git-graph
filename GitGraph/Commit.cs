@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using System.Numerics;
+﻿using System.Numerics;
 
 namespace GitGraph
 {
@@ -9,16 +7,20 @@ namespace GitGraph
 		public BigInteger Id { get; }
 		public Commit Parent { get; internal set; }
 		public Commit MergeParent { get; internal set; }
-		public List<Commit> ChildCommits { get; }
-		public string[] Branches { get; }
-		public string[] Tags { get; }
 
-		public Commit(BigInteger id, ILookup<BigInteger, string> branches, ILookup<BigInteger, string> tags)
+		public Commit(BigInteger id, Commit parent = null, Commit mergeParent = null)
 		{
 			Id = id;
-			Branches = branches[id].ToArray();
-			Tags = tags[id].ToArray();
-			ChildCommits = new List<Commit>(1);
+			Parent = parent;
+			MergeParent = mergeParent;
 		}
+
+		public override string ToString() => Id.ToString("x");
+
+		private static bool Equals(Commit left, Commit right) => ReferenceEquals(left, right) || left?.Id == right?.Id;
+		public static bool operator ==(Commit left, Commit right) => Equals(left, right);
+		public static bool operator !=(Commit left, Commit right) => !Equals(left, right);
+		public override bool Equals(object obj) => Equals(this, obj as Commit);
+		public override int GetHashCode() => Id.GetHashCode();
 	}
 }
