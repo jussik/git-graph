@@ -24,7 +24,7 @@ namespace GitGraph
 
 			int group = 0;
 		    int weight = 1;
-		    while (commitQueue.Count > 0 || mergeQueue.Count > 0)
+		    while (commitQueue.Count > 0)
 		    {
 			    while (commitQueue.TryDequeue(out Commit commit))
 			    {
