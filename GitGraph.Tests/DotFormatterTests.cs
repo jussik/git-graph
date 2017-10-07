@@ -26,10 +26,10 @@ node [group=2]
 ""2"" -> ""3"" -> ""6""
 node [group=3]
 ""3"" -> ""5""
-""1"" [shape=box, label=""<initial>""]
-""5"" [shape=box, label=""<merged>""]
-""7"" [shape=box, label=""master""]
-""6"" [shape=box, label=""other-branch""]
+""1"" [shape=none, label=""<initial>""]
+""5"" [shape=none, label=""<merged>""]
+""7"" [shape=none, label=""master""]
+""6"" [shape=none, label=""other-branch""]
 }
 ".TrimStart()));
 			}
@@ -54,8 +54,8 @@ node [group=2]
 ""2"" -> ""3"" -> ""6""
 node [group=3]
 ""3"" -> ""5""
-""7"" [shape=box, label=""master""]
-""6"" [shape=box, label=""other-branch""]
+""7"" [shape=none, label=""master""]
+""6"" [shape=none, label=""other-branch""]
 }
 ".TrimStart()));
 		    }

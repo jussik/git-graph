@@ -34,7 +34,7 @@ namespace GitGraph
 							label += "\\n";
 						label += "<" + string.Join(", ", commit.Tags) + ">";
 					}
-					labels[commit] = label != null ? $"{id} [shape=box, label=\"{label}\"]" : null;
+					labels[commit] = label != null ? $"{id} [shape=none, label=\"{label}\"]" : null;
 				}
 
 				return id;

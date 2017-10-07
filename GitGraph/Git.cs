@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Text;
 
 namespace GitGraph
@@ -16,7 +17,9 @@ namespace GitGraph
 
 		public IEnumerable<string> GetCommits() => GetLines("rev-list --remotes --parents");
 		public IEnumerable<string> GetTags() => GetRefs("refs/tags");
-		public IEnumerable<string> GetBranches() => GetRefs("refs/remotes/origin");
+		public IEnumerable<string> GetBranches() => GetRefs("refs/remotes/origin")
+			.Select(b => b.Replace(" origin/", " ", StringComparison.Ordinal))
+			.Where(b => !b.EndsWith(" HEAD", StringComparison.Ordinal));
 
 		private IEnumerable<string> GetRefs(string type) => GetLines("for-each-ref --format=\"%(objectname) %(refname:short)\" " + type);
 
