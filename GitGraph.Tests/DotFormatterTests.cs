@@ -20,12 +20,13 @@ namespace GitGraph.Tests
 digraph {
 rankdir=LR
 node [width=0.1, height=0.1, shape=point, fontsize=10]
-edge [arrowhead=none]
+edge [arrowhead=none, weight=1]
 node [group=1]
 ""356a192"" -> ""da4b923"" -> ""1b64538"" -> ""ac3478d"" -> ""902ba3c""
 node [group=2]
 ""da4b923"" -> ""77de68d"" -> ""c1dfd96""
-node [group=3]
+node [group=merges]
+edge [style=dashed, weight=0]
 ""77de68d"" -> ""ac3478d""
 ""902ba3c"" [shape=none, label=""master""]
 ""c1dfd96"" [shape=none, label=""other-branch""]
@@ -48,12 +49,13 @@ node [group=3]
 digraph {
 rankdir=LR
 node [width=0.1, height=0.1, shape=point, fontsize=10]
-edge [arrowhead=none]
+edge [arrowhead=none, weight=1]
 node [group=1]
 ""356a192"" -> ""da4b923"" -> ""1b64538"" -> ""ac3478d"" -> ""902ba3c""
 node [group=2]
 ""da4b923"" -> ""77de68d"" -> ""c1dfd96""
-node [group=3]
+node [group=merges]
+edge [style=dashed, weight=0]
 ""77de68d"" -> ""ac3478d""
 ""902ba3c"" [shape=none, label=""master""]
 ""c1dfd96"" [shape=none, label=""other-branch""]

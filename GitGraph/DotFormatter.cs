@@ -12,53 +12,84 @@ namespace GitGraph
 		    stream.WriteLine("digraph {");
 		    stream.WriteLine("rankdir=LR");
 		    stream.WriteLine("node [width=0.1, height=0.1, shape=point, fontsize=10]");
-		    stream.WriteLine("edge [arrowhead=none]");
+		    stream.WriteLine("edge [arrowhead=none, weight=1]");
 
-			IEnumerable<(Commit parent, Commit child)> GetCommitPairs(Ref r)
-			{
-				if (r.Commit.Parent != null)
-					yield return (r.Commit.Parent, r.Commit);
-				if (r.Commit.MergeParent != null)
-					yield return (r.Commit.MergeParent, r.Commit);
-			}
+		    var processedCommits = new HashSet<Commit>();
+		    var processedMerges = new HashSet<(Commit parent, Commit commit)>();
+			var commitQueue = new Queue<Commit>(GraphOptimiser.GetUnmergedRefs(refs)
+				.OrderBy(r => r.Name == "master" ? "" : r.Name)
+				.Select(r => r.Commit)
+				.Distinct());
+			var mergeQueue = new Queue<(Commit parent, Commit commit)>();
 
-		    var processed = new HashSet<BigInteger>();
-			var queue = new Queue<(Commit parent, Commit child)>(GraphOptimiser.GetUnmergedRefs(refs).SelectMany(GetCommitPairs));
-
-			// commit chains
 			int group = 0;
-			while(queue.TryDequeue(out var commitPair))
-			{
-				stream.Write("node [group=");
-				stream.Write(++group);
-				stream.WriteLine("]");
+		    int weight = 1;
+		    while (commitQueue.Count > 0 || mergeQueue.Count > 0)
+		    {
+			    while (commitQueue.TryDequeue(out Commit commit))
+			    {
+				    var firstParents = new Stack<Commit>();
 
-				var firstParents = new List<Commit> {commitPair.child, commitPair.parent};
-				if (commitPair.parent.MergeParent != null)
-					queue.Enqueue((commitPair.parent.MergeParent, commitPair.parent));
+				    while (commit != null)
+				    {
+					    firstParents.Push(commit);
+					    if (!processedCommits.Add(commit))
+							break;
 
-				Commit commit = commitPair.parent;
-				while (!processed.Contains(commit.Id) && (commit = commit.Parent) != null)
-				{
-					firstParents.Add(commit);
+						if (commit.MergeParent != null)
+						{
+							var merge = (commit.MergeParent, commit);
+							if (processedMerges.Add(merge))
+							    mergeQueue.Enqueue(merge);
+					    }
 
-					if (processed.Contains(commit.Id))
-						break;
+					    commit = commit.Parent;
+				    }
 
-					if (commit.MergeParent != null)
-						queue.Enqueue((commit.MergeParent, commit));
+					if(firstParents.Count < 2)
+						continue;
+
+				    stream.Write("node [group=");
+				    stream.Write(++group);
+				    stream.WriteLine("]");
+				    if (weight != 1)
+				    {
+					    stream.WriteLine("edge [style=solid, weight=1]");
+					    weight = 1;
+				    }
+
+					using (var nodes = firstParents.GetEnumerator())
+				    {
+					    if (nodes.MoveNext())
+					    {
+						    AppendCommit(nodes.Current, repo, stream);
+						    while (nodes.MoveNext())
+						    {
+								stream.Write(" -> ");
+								AppendCommit(nodes.Current, repo, stream);
+						    }
+							stream.WriteLine();
+					    }
+				    }
 				}
-
-				AppendCommit(firstParents[firstParents.Count - 1], repo, stream);
-				for (int i = firstParents.Count - 2; i >= 0; --i)
+			    while (mergeQueue.TryDequeue(out (Commit parent, Commit commit) merge))
 				{
+					if (weight != 0)
+				    {
+						stream.WriteLine("node [group=merges]");
+					    stream.WriteLine("edge [style=dashed, weight=0]");
+					    weight = 0;
+				    }
+
+					AppendCommit(merge.parent, repo, stream);
 					stream.Write(" -> ");
-					AppendCommit(firstParents[i], repo, stream);
-				}
-				stream.WriteLine();
+					AppendCommit(merge.commit, repo, stream);
+					stream.WriteLine();
 
-				processed.UnionWith(firstParents.Select(l => l.Id));
-			}
+					if(!processedCommits.Contains(merge.parent))
+						commitQueue.Enqueue(merge.parent);
+				}
+		    }
 
 			// ref labels
 			Dictionary<BigInteger, IEnumerable<Ref>> refsById = refs

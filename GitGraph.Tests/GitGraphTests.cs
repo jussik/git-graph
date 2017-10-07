@@ -17,27 +17,33 @@ namespace GitGraph.Tests
 	    [Test]
 	    public void TestParentCommits()
 	    {
-		    var commits = new RepositoryImporter(new MockGit()).GetRepository().CommitsById;
+		    var repo = new RepositoryImporter(new MockGit()).GetRepository();
 
-		    Assert.That(
-			    commits[1].Parent,
+		    var c1 = repo.FindCommit("356a192b");
+		    var c2 = repo.FindCommit("da4b9237");
+		    var c3 = repo.FindCommit("77de68da");
+		    var c4 = repo.FindCommit("1b645389");
+		    var c5 = repo.FindCommit("ac3478d6");
+
+			Assert.That(
+			    c1.Parent,
 			    Is.Null);
 		    Assert.That(
-			    commits[1].MergeParent,
+			    c1.MergeParent,
 			    Is.Null);
 
 			Assert.That(
-			    commits[5].Parent,
-			    Is.EqualTo(commits[4]));
+			    c5.Parent,
+			    Is.EqualTo(c4));
 		    Assert.That(
-			    commits[5].MergeParent,
-			    Is.EqualTo(commits[3]));
+			    c5.MergeParent,
+			    Is.EqualTo(c3));
 
 		    Assert.That(
-			    commits[2].Parent,
-			    Is.EqualTo(commits[1]));
+			    c2.Parent,
+			    Is.EqualTo(c1));
 		    Assert.That(
-			    commits[2].MergeParent,
+			    c2.MergeParent,
 			    Is.Null);
 		}
 
@@ -49,12 +55,12 @@ namespace GitGraph.Tests
 			var master = repo.Refs.FirstOrDefault(r => r.Name == "master");
 			Assert.That(master, Is.Not.Null);
 			Assert.That(master.Type, Is.EqualTo(Ref.RefType.Branch));
-			Assert.That((int)master.Commit.Id, Is.EqualTo(7));
+			Assert.That(master.Commit, Is.EqualTo(repo.FindCommit("902ba3cd")));
 
 			var other = repo.Refs.FirstOrDefault(r => r.Name == "other-branch");
 			Assert.That(other, Is.Not.Null);
 			Assert.That(other.Type, Is.EqualTo(Ref.RefType.Branch));
-			Assert.That((int)other.Commit.Id, Is.EqualTo(6));
+			Assert.That(other.Commit, Is.EqualTo(repo.FindCommit("c1dfd96e")));
 		}
 
 	    [Test]
@@ -65,12 +71,12 @@ namespace GitGraph.Tests
 			var merged = repo.Refs.FirstOrDefault(r => r.Name == "merged");
 			Assert.That(merged, Is.Not.Null);
 			Assert.That(merged.Type, Is.EqualTo(Ref.RefType.Tag));
-			Assert.That((int)merged.Commit.Id, Is.EqualTo(5));
+			Assert.That(merged.Commit, Is.EqualTo(repo.FindCommit("ac3478d6")));
 
 			var initial = repo.Refs.FirstOrDefault(r => r.Name == "initial");
 			Assert.That(initial, Is.Not.Null);
 			Assert.That(initial.Type, Is.EqualTo(Ref.RefType.Tag));
-			Assert.That((int)initial.Commit.Id, Is.EqualTo(1));
+			Assert.That(initial.Commit, Is.EqualTo(repo.FindCommit("356a192b")));
 	    }
 
 		[Test]
