@@ -17,67 +17,51 @@ namespace GitGraph
 
 		public Repository GetRepository()
 		{
-			var branches = GetRefs(git.GetBranches());
-			var tags = GetRefs(git.GetTags());
-
-			var branchLookup = GetRefLookup(branches);
-			var tagLookup = GetRefLookup(tags);
-			var map = git.GetCommits()
+			ILookup<BigInteger, string> branchLookup = GetRefLookup(git.GetBranches());
+			ILookup<BigInteger, string> tagLookup = GetRefLookup(git.GetTags());
+			List<(Commit node, BigInteger[] ids)> commits = git.GetCommits()
 				.Select(line =>
 				{
-					var ids = line.Split(' ').Select(str => BigInteger.Parse(str, NumberStyles.HexNumber)).ToArray();
-					return new
-					{
-						node = new Commit(ids[0], branchLookup, tagLookup),
-						ids
-					};
+					BigInteger[] ids = line.Split(' ')
+						.Select(str => BigInteger.Parse(str, NumberStyles.HexNumber))
+						.ToArray();
+					return (node: new Commit(ids[0], branchLookup, tagLookup), ids);
 				})
-				.ToDictionary(c => c.node.Id);
+				.ToList();
 
-			Commit ApplyNode(Commit node, BigInteger[] ids, int ix)
+			Dictionary<BigInteger, (Commit node, BigInteger[] ids)> map = commits.ToDictionary(c => c.node.Id);
+
+			Commit ApplyNode(Commit commit, BigInteger[] ids, int ix)
 			{
 				if (ids.Length < ix + 1)
 					return null;
-				Commit parent = map.GetValueOrDefault(ids[ix])?.node
-					?? throw new InvalidOperationException("No such commit " + ids[ix]);
-				parent.ChildCommits.Add(node);
+				Commit parent = map.TryGetValue(ids[ix], out var c) ? c.node
+					: throw new InvalidOperationException("No such commit " + ids[ix]);
+				parent.ChildCommits.Add(commit);
 				return parent;
 			}
 
-			foreach (var commit in map.Values)
+			foreach ((Commit node, BigInteger[] ids) pair in commits)
 			{
-				commit.node.Parent = ApplyNode(commit.node, commit.ids, 1);
-				commit.node.MergeParent = ApplyNode(commit.node, commit.ids, 2);
+				pair.node.Parent = ApplyNode(pair.node, pair.ids, 1);
+				pair.node.MergeParent = ApplyNode(pair.node, pair.ids, 2);
 			}
 
-			var commits =  map.ToDictionary(m => m.Key, m => m.Value.node);
-			return new Repository
-			{
-				CommitsById = commits,
-				BranchesByName = branches.ToDictionary(r => r.name, r => commits[r.commitId]),
-				TagsByName = tags.ToDictionary(r => r.name, r => commits[r.commitId]),
-				BranchesById = branchLookup,
-				TagsById = tagLookup
-			};
+			return new Repository(commits.Select(c => map[c.ids[0]].node));
 		}
 
-		private List<(string name, BigInteger commitId)> GetRefs(IEnumerable<string> refs)
+		private static ILookup<BigInteger, string> GetRefLookup(IEnumerable<string> refs)
 		{
 			return refs.Select(line =>
 			{
-				var spIx = line.IndexOf(' ');
+				int spIx = line.IndexOf(' ');
 				if (spIx == -1)
 					throw new NotSupportedException("Invalid ref syntax: " + line);
 				return (
-					line.Substring(spIx + 1),
-					BigInteger.Parse(line.Substring(0, spIx), NumberStyles.HexNumber)
+					name: line.Substring(spIx + 1),
+					id: BigInteger.Parse(line.Substring(0, spIx), NumberStyles.HexNumber)
 				);
-			})
-			.ToList();
-		}
-		private ILookup<BigInteger, string> GetRefLookup(IEnumerable<(string name, BigInteger commitId)> refs)
-		{
-			return refs.ToLookup(r => r.commitId, r => r.name);
+			}).ToLookup(r => r.id, r => r.name);
 		}
 	}
 }

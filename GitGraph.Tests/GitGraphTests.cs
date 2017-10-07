@@ -9,14 +9,14 @@ namespace GitGraph.Tests
 	    [Test]
 	    public void TestCommitCount()
 	    {
-		    var commits = new GraphProcessor(new MockGit()).GetRepository().CommitsById;
+		    var commits = new GraphProcessor(new MockGit()).GetRepository().Commits;
 			Assert.That(commits.Count, Is.EqualTo(7));
 		}
 
 	    [Test]
 	    public void TestChildCommits()
 	    {
-		    var commits = new GraphProcessor(new MockGit()).GetRepository().CommitsById;
+		    var commits = new GraphProcessor(new MockGit()).GetRepository().Commits;
 
 		    Assert.That(
 			    commits[1].ChildCommits.Select(c => (int) c.Id),

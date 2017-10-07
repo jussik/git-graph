@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 
@@ -6,10 +7,15 @@ namespace GitGraph
 {
 	public class Repository
 	{
-		public Dictionary<BigInteger, Commit> CommitsById { get; internal set; }
-		public Dictionary<string, Commit> BranchesByName { get; internal set; }
-		public Dictionary<string, Commit> TagsByName { get; internal set; }
-		public ILookup<BigInteger, string> BranchesById { get; internal set; }
-		public ILookup<BigInteger, string> TagsById { get; internal set; }
+		public List<Commit> Commits { get; }
+		public Dictionary<BigInteger, Commit> CommitsById => commitsById.Value;
+
+		private readonly Lazy<Dictionary<BigInteger, Commit>> commitsById;
+
+		public Repository(IEnumerable<Commit> commits)
+		{
+			Commits = commits.ToList();
+			commitsById = new Lazy<Dictionary<BigInteger, Commit>>(() => Commits.ToDictionary(c => c.Id));
+		}
 	}
 }

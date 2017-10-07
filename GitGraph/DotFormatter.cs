@@ -10,7 +10,7 @@ namespace GitGraph
     {
 		public static async Task ToDigraphAsync(Repository repo, TextWriter stream, bool includeTags)
 		{
-			var queue = new Queue<(Commit parent, Commit commit)>(repo.CommitsById.Values
+			var queue = new Queue<(Commit parent, Commit commit)>(repo.Commits
 				.Where(c => c.Parent == null)
 				.SelectMany(parent => parent.ChildCommits.Select(commit => (parent, commit))));
 			var visited = new HashSet<Commit>();
