@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
+using Gma.DataStructures.StringSearch;
 
 namespace GitGraph
 {
@@ -11,6 +12,7 @@ namespace GitGraph
 		public Dictionary<BigInteger, Commit> CommitsById => commitsById.Value;
 
 		private readonly Lazy<Dictionary<BigInteger, Commit>> commitsById;
+		private readonly Lazy<ITrie<Commit>> commitsByPrefix;
 
 		public Repository(IEnumerable<Ref> refs)
 		{
@@ -30,6 +32,47 @@ namespace GitGraph
 				}
 				return map;
 			});
+			commitsByPrefix = new Lazy<ITrie<Commit>>(() =>
+			{
+				var trie = new PatriciaTrie<Commit>();
+				foreach (Commit commit in CommitsById.Values)
+				{
+					trie.Add(commit.ToString(), commit);
+				}
+				return trie;
+			});
+		}
+
+		public Commit FindCommit(string abbrev)
+		{
+			using (IEnumerator<Commit> match = commitsByPrefix.Value.Retrieve(abbrev).GetEnumerator())
+			{
+				if (!match.MoveNext())
+					return null;
+				Commit firstResult = match.Current;
+				if (match.MoveNext())
+					throw new InvalidOperationException("Ambiguous commit id " + abbrev);
+				return firstResult;
+			}
+		}
+
+		public string GetCommitAbbrev(Commit commit)
+		{
+			ITrie<Commit> trie = commitsByPrefix.Value;
+			string name = commit.ToString();
+			int maxLen = name.Length;
+			for (int i = 7; i < maxLen; i++)
+			{
+				string attempt = name.Substring(0, i);
+				using (IEnumerator<Commit> match = trie.Retrieve(attempt).GetEnumerator())
+				{
+					if (!match.MoveNext())
+						throw new InvalidOperationException("Commit not in repository");
+					if (match.Current == commit && !match.MoveNext())
+						return attempt;
+				}
+			}
+			return name;
 		}
 	}
 

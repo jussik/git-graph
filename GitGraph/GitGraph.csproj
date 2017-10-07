@@ -9,4 +9,8 @@
     <LangVersion>latest</LangVersion>
   </PropertyGroup>
 
+  <ItemGroup>
+    <PackageReference Include="TrieNet" Version="1.0.3.26316" />
+  </ItemGroup>
+
 </Project>

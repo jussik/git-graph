@@ -7,7 +7,7 @@ namespace GitGraph
 {
     public static class DotFormatter
     {
-	    public static void ToDigraph(IReadOnlyCollection<Ref> refs, TextWriter stream)
+	    public static void ToDigraph(Repository repo, IReadOnlyCollection<Ref> refs, TextWriter stream)
 	    {
 		    stream.WriteLine("digraph {");
 		    stream.WriteLine("rankdir=LR");
@@ -49,11 +49,11 @@ namespace GitGraph
 						queue.Enqueue((commit.MergeParent, commit));
 				}
 
-				AppendCommit(firstParents[firstParents.Count - 1], stream);
+				AppendCommit(firstParents[firstParents.Count - 1], repo, stream);
 				for (int i = firstParents.Count - 2; i >= 0; --i)
 				{
 					stream.Write(" -> ");
-					AppendCommit(firstParents[i], stream);
+					AppendCommit(firstParents[i], repo, stream);
 				}
 				stream.WriteLine();
 
@@ -69,7 +69,7 @@ namespace GitGraph
 				if (!refsById.TryGetValue(r.Commit.Id, out IEnumerable<Ref> commitRefs))
 					continue; // already processed this commit
 
-				AppendCommit(r.Commit, stream);
+				AppendCommit(r.Commit, repo, stream);
 				stream.Write(" [shape=none, label=\"");
 				refsById.Remove(r.Commit.Id);
 				using (IEnumerator<Ref> crefs = commitRefs.GetEnumerator())
@@ -90,10 +90,10 @@ namespace GitGraph
 			stream.WriteLine("}");
 		}
 
-	    private static void AppendCommit(Commit commit, TextWriter stream)
+	    private static void AppendCommit(Commit commit, Repository repo, TextWriter stream)
 	    {
 		    stream.Write('"');
-		    stream.Write(commit);
+		    stream.Write(repo.GetCommitAbbrev(commit));
 		    stream.Write('"');
 		}
 	}

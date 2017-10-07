@@ -15,7 +15,7 @@ namespace GitGraph
 			MergeParent = mergeParent;
 		}
 
-		public override string ToString() => Id.ToString("x");
+		public override string ToString() => Id.ToString("x40");
 
 		private static bool Equals(Commit left, Commit right) => ReferenceEquals(left, right) || left?.Id == right?.Id;
 		public static bool operator ==(Commit left, Commit right) => Equals(left, right);

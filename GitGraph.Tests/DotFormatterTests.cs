@@ -14,7 +14,7 @@ namespace GitGraph.Tests
 		    var repo = new RepositoryImporter(new MockGit()).GetRepository();
 		    using (StringWriter sw = new StringWriter())
 			{
-				DotFormatter.ToDigraph(repo.Refs, sw);
+				DotFormatter.ToDigraph(repo, repo.Refs, sw);
 				Console.WriteLine(sw.ToString());
 				Assert.That(sw.ToString(), Is.EqualTo(@"
 digraph {
@@ -22,15 +22,15 @@ rankdir=LR
 node [width=0.1, height=0.1, shape=point, fontsize=10]
 edge [arrowhead=none]
 node [group=1]
-""1"" -> ""2"" -> ""4"" -> ""5"" -> ""7""
+""356a192"" -> ""da4b923"" -> ""1b64538"" -> ""ac3478d"" -> ""902ba3c""
 node [group=2]
-""2"" -> ""3"" -> ""6""
+""da4b923"" -> ""77de68d"" -> ""c1dfd96""
 node [group=3]
-""3"" -> ""5""
-""7"" [shape=none, label=""master""]
-""6"" [shape=none, label=""other-branch""]
-""5"" [shape=none, label=""<merged>""]
-""1"" [shape=none, label=""<initial>""]
+""77de68d"" -> ""ac3478d""
+""902ba3c"" [shape=none, label=""master""]
+""c1dfd96"" [shape=none, label=""other-branch""]
+""ac3478d"" [shape=none, label=""<merged>""]
+""356a192"" [shape=none, label=""<initial>""]
 }
 ".TrimStart()));
 			}
@@ -42,7 +42,7 @@ node [group=3]
 		    var repo = new RepositoryImporter(new MockGit()).GetRepository();
 		    using (StringWriter sw = new StringWriter())
 		    {
-			    DotFormatter.ToDigraph(repo.Refs.Where(r => r.Type != Ref.RefType.Tag).ToList(), sw);
+			    DotFormatter.ToDigraph(repo, repo.Refs.Where(r => r.Type != Ref.RefType.Tag).ToList(), sw);
 				Console.WriteLine(sw.ToString());
 			    Assert.That(sw.ToString(), Is.EqualTo(@"
 digraph {
@@ -50,13 +50,13 @@ rankdir=LR
 node [width=0.1, height=0.1, shape=point, fontsize=10]
 edge [arrowhead=none]
 node [group=1]
-""1"" -> ""2"" -> ""4"" -> ""5"" -> ""7""
+""356a192"" -> ""da4b923"" -> ""1b64538"" -> ""ac3478d"" -> ""902ba3c""
 node [group=2]
-""2"" -> ""3"" -> ""6""
+""da4b923"" -> ""77de68d"" -> ""c1dfd96""
 node [group=3]
-""3"" -> ""5""
-""7"" [shape=none, label=""master""]
-""6"" [shape=none, label=""other-branch""]
+""77de68d"" -> ""ac3478d""
+""902ba3c"" [shape=none, label=""master""]
+""c1dfd96"" [shape=none, label=""other-branch""]
 }
 ".TrimStart()));
 		    }
