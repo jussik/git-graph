@@ -1,6 +1,8 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+using GitGraph.Input;
+using GitGraph.Output;
 using NUnit.Framework;
 
 namespace GitGraph.Tests

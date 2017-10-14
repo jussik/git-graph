@@ -4,7 +4,7 @@ using System.Globalization;
 using System.Linq;
 using System.Numerics;
 
-namespace GitGraph
+namespace GitGraph.Input
 {
 	public class RepositoryImporter
 	{

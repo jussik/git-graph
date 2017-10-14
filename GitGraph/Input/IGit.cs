@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace GitGraph
+namespace GitGraph.Input
 {
 	public interface IGit
 	{

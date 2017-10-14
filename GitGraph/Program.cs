@@ -1,4 +1,6 @@
 ﻿using System;
+using GitGraph.Input;
+using GitGraph.Output;
 
 namespace GitGraph
 {

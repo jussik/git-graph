@@ -2,8 +2,9 @@
 using System.IO;
 using System.Linq;
 using System.Numerics;
+using GitGraph.Optimisation;
 
-namespace GitGraph
+namespace GitGraph.Output
 {
     public static class DotFormatter
     {

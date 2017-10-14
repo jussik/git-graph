@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
+using GitGraph.Optimisation;
 using NUnit.Framework;
 
 namespace GitGraph.Tests

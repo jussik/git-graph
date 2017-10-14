@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 
-namespace GitGraph
+namespace GitGraph.Optimisation
 {
 	public class Grafter
 	{
@@ -94,7 +94,7 @@ namespace GitGraph
 				.Select(c => Grafts.TryGetValue(c.Id, out Graft graft) ? graft.Ids : c.Ids)
 				.ToList();
 
-			return RepositoryImporter.GetCommitMap(graftedCommits);
+			return CommitUtils.GetCommitMap(graftedCommits);
 		}
 	}
 }

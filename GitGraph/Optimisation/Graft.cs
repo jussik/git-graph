@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Numerics;
 
-namespace GitGraph
+namespace GitGraph.Optimisation
 {
 	public class Graft
 	{

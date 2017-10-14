@@ -2,7 +2,7 @@
 using System.Linq;
 using System.Numerics;
 
-namespace GitGraph
+namespace GitGraph.Optimisation
 {
 	public static class GraphOptimiser
     {
