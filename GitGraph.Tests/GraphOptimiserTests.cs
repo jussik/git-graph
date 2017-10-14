@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 using NUnit.Framework;
 
 namespace GitGraph.Tests
@@ -148,11 +149,32 @@ namespace GitGraph.Tests
 		    Repository repo = builder.BuildRepository();
 
 		    var grafts = new[] {new GraphOptimiser.Graft(head.Id, root.Id)};
-		    var newRepo = GraphOptimiser.ApplyGrafts(repo.Refs, grafts);
+		    var newRepo = GraphOptimiser.GetGraftedCommits(repo.Refs, grafts);
 
-		    Commit newHead = newRepo.Refs.ByName("master")?.Commit;
+		    Commit newHead = newRepo.GetValueOrDefault(head.Id);
 		    Assert.That(newHead, Is.EqualTo(head));
-			Assert.That(newHead?.Parent, Is.EqualTo(root));
+			Assert.That(newHead.Parent, Is.EqualTo(root));
+		}
+
+	    [Test]
+	    public void TestSimplePrune()
+		{
+			RepositoryBuilder builder = new RepositoryBuilder();
+			Commit root = builder.AddCommit();
+			Commit toPrune = builder.AddCommit(root);
+			Commit head = builder.AddCommit(root);
+			builder.AddBranch("master", head);
+			Repository repo = builder.BuildRepository();
+
+			Dictionary<BigInteger, Commit> map = repo.Commits.ToDictionary(c => c.Id);
+
+			Assert.That(map.Count, Is.EqualTo(3));
+			GraphOptimiser.PruneCommits(map, new[] {head});
+			Assert.That(map.Count, Is.EqualTo(2));
+
+			Assert.That(map, Contains.Key(root.Id));
+			Assert.That(map, Contains.Key(head.Id));
+			Assert.That(map, Does.Not.ContainKey(toPrune.Id));
 		}
 
 		[Test]
