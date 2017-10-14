@@ -16,7 +16,7 @@ namespace GitGraph
 
 		    var processedCommits = new HashSet<Commit>();
 		    var processedMerges = new HashSet<(Commit parent, Commit commit)>();
-			var commitQueue = new Queue<Commit>(GraphOptimiser.GetUnmergedRefs(refs)
+			var commitQueue = new Queue<Commit>(GraphOptimiser.GetUnmergedRefs(repo, refs)
 				.OrderBy(r => r.Name == "master" ? "" : r.Name)
 				.Select(r => r.Commit)
 				.Distinct());

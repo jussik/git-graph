@@ -12,29 +12,9 @@ namespace GitGraph
 		    throw new NotImplementedException();
 	    }
 
-	    public static IEnumerable<Ref> GetUnmergedRefs(IReadOnlyCollection<Ref> refs)
+	    public static IEnumerable<Ref> GetUnmergedRefs(Repository repo, IReadOnlyCollection<Ref> refs = null)
 	    {
-		    Dictionary<BigInteger, Ref> unmerged = refs.ToDictionary(r => r.Commit.Id);
-		    var queue = new Queue<Commit>();
-		    foreach (var commit in refs.Select(r => r.Commit))
-		    {
-			    if (commit.Parent != null && !queue.Contains(commit.Parent))
-				    queue.Enqueue(commit.Parent);
-			    if (commit.MergeParent != null && !queue.Contains(commit.MergeParent))
-				    queue.Enqueue(commit.MergeParent);
-		    }
-
-		    while (queue.TryDequeue(out Commit commit))
-		    {
-			    do
-			    {
-				    unmerged.Remove(commit.Id);
-				    if (commit.MergeParent != null)
-					    queue.Enqueue(commit.MergeParent);
-			    } while ((commit = commit.Parent) != null);
-		    }
-
-		    return refs.Where(r => unmerged.ContainsKey(r.Commit.Id));
+		    return (refs ?? repo.Refs).Where(r => !repo.CommitChildren.Contains(r.Commit.Id));
 	    }
     }
 }

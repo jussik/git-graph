@@ -10,9 +10,11 @@ namespace GitGraph
 	{
 		public List<Ref> Refs { get; }
 		public Dictionary<BigInteger, Commit> CommitsById => commitsById.Value;
+		public ILookup<BigInteger, Commit> CommitChildren => commitChildren.Value;
 
 		private readonly Lazy<Dictionary<BigInteger, Commit>> commitsById;
 		private readonly Lazy<ITrie<Commit>> commitsByPrefix;
+		private readonly Lazy<ILookup<BigInteger, Commit>> commitChildren;
 
 		public Repository(IEnumerable<Ref> refs)
 		{
@@ -41,6 +43,9 @@ namespace GitGraph
 				}
 				return trie;
 			});
+			commitChildren = new Lazy<ILookup<BigInteger, Commit>>(() => CommitsById.Values
+				.SelectMany(c => c.Parents.Select(p => (parent: p, child: c)))
+				.ToLookup(t => t.parent.Id, t => t.child));
 		}
 
 		public Commit FindCommit(string abbrev)
