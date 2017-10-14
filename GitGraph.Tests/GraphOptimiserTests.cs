@@ -16,7 +16,7 @@ namespace GitGraph.Tests
 	    {
 		    var repo = new RepositoryImporter(new MockGit()).GetRepository();
 		    Assert.That(
-			    GraphOptimiser.GetUnmergedRefs(repo).Select(r => r.Name),
+			    GraphOptimiser.GetUnmergedRefs(repo.Refs).Select(r => r.Name),
 			    Is.EquivalentTo(new[] { "master", "other-branch" }));
 	    }
 	}

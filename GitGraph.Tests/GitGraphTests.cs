@@ -52,12 +52,12 @@ namespace GitGraph.Tests
 		{
 			var repo = new RepositoryImporter(new MockGit()).GetRepository();
 
-			var master = repo.Refs.FirstOrDefault(r => r.Name == "master");
+			var master = repo.Refs.Refs.FirstOrDefault(r => r.Name == "master");
 			Assert.That(master, Is.Not.Null);
 			Assert.That(master.Type, Is.EqualTo(Ref.RefType.Branch));
 			Assert.That(master.Commit, Is.EqualTo(repo.FindCommit("902ba3cd")));
 
-			var other = repo.Refs.FirstOrDefault(r => r.Name == "other-branch");
+			var other = repo.Refs.Refs.FirstOrDefault(r => r.Name == "other-branch");
 			Assert.That(other, Is.Not.Null);
 			Assert.That(other.Type, Is.EqualTo(Ref.RefType.Branch));
 			Assert.That(other.Commit, Is.EqualTo(repo.FindCommit("c1dfd96e")));
@@ -68,12 +68,12 @@ namespace GitGraph.Tests
 		{
 			var repo = new RepositoryImporter(new MockGit()).GetRepository();
 
-			var merged = repo.Refs.FirstOrDefault(r => r.Name == "merged");
+			var merged = repo.Refs.Refs.FirstOrDefault(r => r.Name == "merged");
 			Assert.That(merged, Is.Not.Null);
 			Assert.That(merged.Type, Is.EqualTo(Ref.RefType.Tag));
 			Assert.That(merged.Commit, Is.EqualTo(repo.FindCommit("ac3478d6")));
 
-			var initial = repo.Refs.FirstOrDefault(r => r.Name == "initial");
+			var initial = repo.Refs.Refs.FirstOrDefault(r => r.Name == "initial");
 			Assert.That(initial, Is.Not.Null);
 			Assert.That(initial.Type, Is.EqualTo(Ref.RefType.Tag));
 			Assert.That(initial.Commit, Is.EqualTo(repo.FindCommit("356a192b")));
@@ -85,7 +85,7 @@ namespace GitGraph.Tests
 			int GetDepth(Commit commit) => commit != null ? 1 + Math.Max(GetDepth(commit.Parent), GetDepth(commit.MergeParent)) : 0;
 
 		    var repo = new RepositoryImporter(new MockGit()).GetRepository();
-		    Assert.That(repo.Refs.Max(r => GetDepth(r.Commit)), Is.EqualTo(5));
+		    Assert.That(repo.Refs.Refs.Max(r => GetDepth(r.Commit)), Is.EqualTo(5));
 	    }
 	}
 }

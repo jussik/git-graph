@@ -8,7 +8,7 @@ namespace GitGraph
 {
 	public class Repository
 	{
-		public List<Ref> Refs { get; }
+		public RefCollection Refs { get; }
 		public Dictionary<BigInteger, Commit> CommitsById => commitsById.Value;
 		public ILookup<BigInteger, Commit> CommitChildren => commitChildren.Value;
 
@@ -18,11 +18,11 @@ namespace GitGraph
 
 		public Repository(IEnumerable<Ref> refs)
 		{
-			Refs = refs.ToList();
+			Refs = new RefCollection(this, refs.ToList());
 			commitsById = new Lazy<Dictionary<BigInteger, Commit>>(() =>
 			{
 				var map = new Dictionary<BigInteger, Commit>();
-				var commits = new Stack<Commit>(Refs.Select(r => r.Commit));
+				var commits = new Stack<Commit>(Refs.Refs.Select(r => r.Commit));
 				while (commits.TryPop(out Commit commit))
 				{
 					if (map.TryAdd(commit.Id, commit) && commit.Parent != null)
@@ -79,23 +79,5 @@ namespace GitGraph
 			}
 			return name;
 		}
-	}
-
-	public class Ref
-	{
-		public string Name { get; }
-		public RefType Type { get; }
-		public Commit Commit { get; }
-
-		public enum RefType { Branch, Tag }
-
-		public Ref(string name, RefType type, Commit commit)
-		{
-			Name = name;
-			Type = type;
-			Commit = commit;
-		}
-
-		public override string ToString() => Type == RefType.Tag ? $"<{Name}>" : Name;
 	}
 }

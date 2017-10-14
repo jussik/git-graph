@@ -8,7 +8,7 @@ namespace GitGraph
 		{
 			var dir = args.Length > 0 ? args[0] : Environment.CurrentDirectory;
 			var repo = new RepositoryImporter(new Git(dir)).GetRepository();
-			DotFormatter.ToDigraph(repo, repo.Refs, Console.Out);
+			DotFormatter.ToDigraph(repo.Refs, Console.Out);
 		}
 	}
 }

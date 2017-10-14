@@ -1,20 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Numerics;
 
 namespace GitGraph
 {
     public static class GraphOptimiser
     {
-	    public static Repository GetOptimised(Repository source, bool includeTags = true)
+	    public static Repository GetOptimised(RefCollection refs)
 	    {
 		    throw new NotImplementedException();
 	    }
 
-	    public static IEnumerable<Ref> GetUnmergedRefs(Repository repo, IReadOnlyCollection<Ref> refs = null)
+	    public static IEnumerable<Ref> GetUnmergedRefs(RefCollection refs)
 	    {
-		    return (refs ?? repo.Refs).Where(r => !repo.CommitChildren.Contains(r.Commit.Id));
+		    return refs.Refs.Where(r => !refs.Repository.CommitChildren.Contains(r.Commit.Id));
 	    }
     }
 }

@@ -14,7 +14,7 @@ namespace GitGraph.Tests
 		    var repo = new RepositoryImporter(new MockGit()).GetRepository();
 		    using (StringWriter sw = new StringWriter())
 			{
-				DotFormatter.ToDigraph(repo, repo.Refs, sw);
+				DotFormatter.ToDigraph(repo.Refs, sw);
 				Console.WriteLine(sw.ToString());
 				Assert.That(sw.ToString(), Is.EqualTo(@"
 digraph {
@@ -43,7 +43,7 @@ edge [style=dashed, weight=0]
 		    var repo = new RepositoryImporter(new MockGit()).GetRepository();
 		    using (StringWriter sw = new StringWriter())
 		    {
-			    DotFormatter.ToDigraph(repo, repo.Refs.Where(r => r.Type != Ref.RefType.Tag).ToList(), sw);
+			    DotFormatter.ToDigraph(repo.Refs.Subset(refs => refs.Where(r => r.Type != Ref.RefType.Tag)), sw);
 				Console.WriteLine(sw.ToString());
 			    Assert.That(sw.ToString(), Is.EqualTo(@"
 digraph {

@@ -7,16 +7,17 @@ namespace GitGraph
 {
     public static class DotFormatter
     {
-	    public static void ToDigraph(Repository repo, IReadOnlyCollection<Ref> refs, TextWriter stream)
+	    public static void ToDigraph(RefCollection refs, TextWriter stream)
 	    {
 		    stream.WriteLine("digraph {");
 		    stream.WriteLine("rankdir=LR");
 		    stream.WriteLine("node [width=0.1, height=0.1, shape=point, fontsize=10]");
 		    stream.WriteLine("edge [arrowhead=none, weight=1]");
 
+		    Repository repo = refs.Repository;
 		    var processedCommits = new HashSet<Commit>();
 		    var processedMerges = new HashSet<(Commit parent, Commit commit)>();
-			var commitQueue = new Queue<Commit>(GraphOptimiser.GetUnmergedRefs(repo, refs)
+			var commitQueue = new Queue<Commit>(GraphOptimiser.GetUnmergedRefs(refs)
 				.OrderBy(r => r.Name == "master" ? "" : r.Name)
 				.Select(r => r.Commit)
 				.Distinct());
@@ -92,10 +93,10 @@ namespace GitGraph
 		    }
 
 			// ref labels
-			Dictionary<BigInteger, IEnumerable<Ref>> refsById = refs
+			Dictionary<BigInteger, IEnumerable<Ref>> refsById = refs.Refs
 				.GroupBy(r => r.Commit.Id)
 				.ToDictionary(g => g.Key, g => (IEnumerable<Ref>)g);
-			foreach (Ref r in refs)
+			foreach (Ref r in refs.Refs)
 			{
 				if (!refsById.TryGetValue(r.Commit.Id, out IEnumerable<Ref> commitRefs))
 					continue; // already processed this commit
