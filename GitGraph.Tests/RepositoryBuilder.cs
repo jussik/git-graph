@@ -36,6 +36,11 @@ namespace GitGraph.Tests
 			refs.Add(new Ref(name, Ref.RefType.Branch, commit));
 		}
 
+		public void AddTag(string name, Commit commit)
+		{
+			refs.Add(new Ref(name, Ref.RefType.Tag, commit));
+		}
+
 		public Repository BuildRepository()
 		{
 			return new Repository(commits, refs);

@@ -7,11 +7,17 @@ namespace GitGraph
 {
     public static class GraphOptimiser
     {
+		/// <summary>
+		/// Create a new simplified but topologically similar repository
+		/// </summary>
+		/// <param name="refs"></param>
+		/// <returns></returns>
 	    public static Repository GetOptimised(RefCollection refs)
 	    {
-		    IEnumerable<Graft> grafts = GetChainGrafts(refs);
-		    Dictionary<BigInteger, Commit> grafted = GetGraftedCommits(refs, grafts);
-		    PruneCommits(grafted, refs.All.Select(r => r.Commit));
+		    List<Commit> whitelist = refs.All.Select(r => r.Commit).ToList();
+		    IEnumerable<Graft> grafts = GetChainGrafts(whitelist).Union(GetLoopGrafts(whitelist));
+		    Dictionary<BigInteger, Commit> grafted = GetGraftedCommits(refs.Repository.Commits, grafts);
+		    PruneCommits(grafted, whitelist);
 
 		    IEnumerable<Ref> newRefs = refs.All
 			    .Select(r => grafted.TryGetValue(r.Commit.Id, out Commit commit) ? new Ref(r.Name, r.Type, commit) : null)
@@ -30,16 +36,27 @@ namespace GitGraph
 		    }
 		}
 
-	    public static Dictionary<BigInteger, Commit> GetGraftedCommits(RefCollection refs, IEnumerable<Graft> grafts)
+		/// <summary>
+		/// Get a map of new Commits based on a set of source commits and grafts
+		/// </summary>
+		/// <param name="commits"></param>
+		/// <param name="grafts"></param>
+		/// <returns></returns>
+		public static Dictionary<BigInteger, Commit> GetGraftedCommits(IEnumerable<Commit> commits, IEnumerable<Graft> grafts)
 	    {
 		    Dictionary<BigInteger, Graft> graftsById = grafts.ToDictionary(g => g.Ids[0]);
-		    List<BigInteger[]> graftedCommits = refs.Repository.Commits
+		    List<BigInteger[]> graftedCommits = commits
 			    .Select(c => graftsById.TryGetValue(c.Id, out Graft graft) ? graft.Ids : c.Ids)
 			    .ToList();
 
 		    return RepositoryImporter.GetCommitMap(graftedCommits);
 	    }
 
+		/// <summary>
+		/// Remove all commits not accessible from whitelist
+		/// </summary>
+		/// <param name="commits"></param>
+		/// <param name="whitelist"></param>
 	    public static void PruneCommits(Dictionary<BigInteger, Commit> commits, IEnumerable<Commit> whitelist)
 	    {
 		    var refsById = new HashSet<Commit>(whitelist);
@@ -85,12 +102,12 @@ namespace GitGraph
 		/// <summary>
 		/// Remove unnecessary commits inside chains (successive commits without branches or merges)
 		/// </summary>
-		/// <param name="refs">refs to keep in the reduced repo</param>
+		/// <param name="whitelist">commits to keep in the reduced repo</param>
 		/// <returns>A map of commits to their new parents (grafts)</returns>
-		public static IEnumerable<Graft> GetChainGrafts(RefCollection refs)
+		public static IEnumerable<Graft> GetChainGrafts(IEnumerable<Commit> whitelist)
 	    {
-			var whitelist = new HashSet<Commit>(refs.All.Select(r => r.Commit));
-			var checkQueue = new Queue<Commit>(whitelist);
+			var whitelistMap = new HashSet<Commit>(whitelist);
+			var checkQueue = new Queue<Commit>(whitelistMap);
 			var chainHeadQueue = new Queue<Commit>();
 			var processedHeads = new HashSet<Commit>();
 
@@ -107,11 +124,11 @@ namespace GitGraph
 					    chainHeadQueue.Enqueue(commit);
 				    }
 				    else
-				    {
-					    // merge commit, check both parents for possible chains
-					    checkQueue.Enqueue(commit.Parent);
-					    checkQueue.Enqueue(commit.MergeParent);
-				    }
+					{
+						// merge commit, check both parents for possible chains
+						checkQueue.Enqueue(commit.Parent);
+						checkQueue.Enqueue(commit.MergeParent);
+					}
 			    }
 
 			    // chain head is always commit with only one parent
@@ -127,10 +144,12 @@ namespace GitGraph
 				    {
 					    root = root.Parent;
 
-					    if (root.MergeParent != null)
-					    {
-						    checkQueue.Enqueue(root.Parent);
-						    checkQueue.Enqueue(root.MergeParent);
+					    if (root.MergeParent != null || whitelistMap.Contains(root))
+						{
+							foreach (Commit parent in root.Parents)
+							{
+								checkQueue.Enqueue(parent);
+							}
 						    break;
 					    }
 				    } while (root.Parent != null);
@@ -144,7 +163,7 @@ namespace GitGraph
 		    }
 	    }
 
-	    public static IEnumerable<Graft> GetLoopGrafts(RefCollection refs)
+	    public static IEnumerable<Graft> GetLoopGrafts(IEnumerable<Commit> whitelist)
 	    {
 		    throw new NotImplementedException();
 	    }
