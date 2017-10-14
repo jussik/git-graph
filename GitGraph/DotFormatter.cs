@@ -93,10 +93,10 @@ namespace GitGraph
 		    }
 
 			// ref labels
-			Dictionary<BigInteger, IEnumerable<Ref>> refsById = refs.Refs
+			Dictionary<BigInteger, IEnumerable<Ref>> refsById = refs.All
 				.GroupBy(r => r.Commit.Id)
 				.ToDictionary(g => g.Key, g => (IEnumerable<Ref>)g);
-			foreach (Ref r in refs.Refs)
+			foreach (Ref r in refs.All)
 			{
 				if (!refsById.TryGetValue(r.Commit.Id, out IEnumerable<Ref> commitRefs))
 					continue; // already processed this commit

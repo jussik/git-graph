@@ -13,7 +13,7 @@ namespace GitGraph
 
 	    public static IEnumerable<Ref> GetUnmergedRefs(RefCollection refs)
 	    {
-		    return refs.Refs.Where(r => !refs.Repository.CommitChildren.Contains(r.Commit.Id));
+		    return refs.All.Where(r => !refs.Repository.CommitChildren.Contains(r.Commit.Id));
 	    }
     }
 }

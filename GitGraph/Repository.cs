@@ -22,7 +22,7 @@ namespace GitGraph
 			commitsById = new Lazy<Dictionary<BigInteger, Commit>>(() =>
 			{
 				var map = new Dictionary<BigInteger, Commit>();
-				var commits = new Stack<Commit>(Refs.Refs.Select(r => r.Commit));
+				var commits = new Stack<Commit>(Refs.All.Select(r => r.Commit));
 				while (commits.TryPop(out Commit commit))
 				{
 					if (map.TryAdd(commit.Id, commit) && commit.Parent != null)
