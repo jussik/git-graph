@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Linq;
+﻿using System.Linq;
 using NUnit.Framework;
 
 namespace GitGraph.Tests
@@ -7,13 +6,15 @@ namespace GitGraph.Tests
 	[TestFixture]
     public class GraphOptimiserTests
     {
-		[Test]
+	    [Test]
 	    public void TestCollapseChain()
 	    {
-			var root = new Commit(1);
-			var middle = new Commit(2, root);
-			var head = new Commit(3, middle);
-		    var repo = new Repository(new List<Ref> {new Ref("master", Ref.RefType.Branch, head)});
+			RepositoryBuilder builder = new RepositoryBuilder();
+			Commit root = builder.AddCommit();
+			Commit middle = builder.AddCommit(root);
+			Commit head = builder.AddCommit(middle);
+		    builder.AddBranch("master", head);
+		    Repository repo = builder.BuildRepository();
 
 		    Repository optimised = GraphOptimiser.GetOptimised(repo.Refs);
 
@@ -25,11 +26,13 @@ namespace GitGraph.Tests
 	    [Test]
 	    public void TestCollapseMergeLoop()
 		{
-			var root = new Commit(1);
-			var branch1 = new Commit(2, root);
-			var branch2 = new Commit(3, root);
-			var head = new Commit(4, branch1, branch2);
-			var repo = new Repository(new List<Ref> { new Ref("master", Ref.RefType.Branch, head) });
+			RepositoryBuilder builder = new RepositoryBuilder();
+			Commit root = builder.AddCommit();
+			Commit branch1 = builder.AddCommit(root);
+			Commit branch2 = builder.AddCommit(root);
+			Commit head = builder.AddCommit(branch1, branch2);
+		    builder.AddBranch("master", head);
+			Repository repo = builder.BuildRepository();
 
 			Repository optimised = GraphOptimiser.GetOptimised(repo.Refs);
 
@@ -41,17 +44,19 @@ namespace GitGraph.Tests
 	    [Test]
 	    public void TestCollapseMergeLoopWithChains()
 	    {
-		    var root = new Commit(1);
-			var preBranch = new Commit(2, root);
-		    var branch1 = new Commit(3, preBranch);
-			var chain1 = new Commit(4, branch1);
-		    var branch2 = new Commit(5, preBranch);
-			var chain2 = new Commit(6, branch2);
-		    var merge = new Commit(7, chain1, chain2);
-		    var head = new Commit(8, merge);
-		    var repo = new Repository(new List<Ref> { new Ref("master", Ref.RefType.Branch, head) });
+			RepositoryBuilder builder = new RepositoryBuilder();
+		    Commit root = builder.AddCommit();
+			Commit preBranch = builder.AddCommit(root);
+		    Commit branch1 = builder.AddCommit(preBranch);
+			Commit chain1 = builder.AddCommit(branch1);
+		    Commit branch2 = builder.AddCommit(preBranch);
+			Commit chain2 = builder.AddCommit(branch2);
+		    Commit merge = builder.AddCommit(chain1, chain2);
+		    Commit head = builder.AddCommit(merge);
+		    builder.AddBranch("master", head);
+		    Repository repo = builder.BuildRepository();
 
-		    Repository optimised = GraphOptimiser.GetOptimised(repo.Refs);
+			Repository optimised = GraphOptimiser.GetOptimised(repo.Refs);
 
 		    Commit optimisedHead = optimised.Refs.All[0].Commit;
 		    Assert.That(optimisedHead, Is.EqualTo(head));
@@ -61,17 +66,19 @@ namespace GitGraph.Tests
 	    [Test]
 	    public void TestCollapseMergeDoubleLoop()
 	    {
-		    var root = new Commit(1);
-		    var preBranch = new Commit(2, root);
-		    var branch1 = new Commit(3, preBranch);
-		    var branch2 = new Commit(4, preBranch);
-		    var merge1 = new Commit(5, branch1, branch2);
-		    var branch3 = new Commit(6, branch2);
-		    var merge2 = new Commit(7, merge1, branch3);
-		    var head = new Commit(8, merge2);
-		    var repo = new Repository(new List<Ref> { new Ref("master", Ref.RefType.Branch, head) });
+			RepositoryBuilder builder = new RepositoryBuilder();
+		    Commit root = builder.AddCommit();
+		    Commit preBranch = builder.AddCommit(root);
+		    Commit branch1 = builder.AddCommit(preBranch);
+		    Commit branch2 = builder.AddCommit(preBranch);
+		    Commit merge1 = builder.AddCommit(branch1, branch2);
+		    Commit branch3 = builder.AddCommit(branch2);
+		    Commit merge2 = builder.AddCommit(merge1, branch3);
+		    Commit head = builder.AddCommit(merge2);
+		    builder.AddBranch("master", head);
+		    Repository repo = builder.BuildRepository();
 
-		    Repository optimised = GraphOptimiser.GetOptimised(repo.Refs);
+			Repository optimised = GraphOptimiser.GetOptimised(repo.Refs);
 
 		    Commit optimisedHead = optimised.Refs.All[0].Commit;
 		    Assert.That(optimisedHead, Is.EqualTo(head));
@@ -81,15 +88,14 @@ namespace GitGraph.Tests
 	    [Test]
 	    public void TestCollapseSplitHeads()
 	    {
-		    var root = new Commit(1);
-		    var middle = new Commit(2, root);
-		    var master = new Commit(3, middle);
-		    var feature = new Commit(4, middle);
-		    var repo = new Repository(new List<Ref>
-		    {
-			    new Ref("master", Ref.RefType.Branch, master),
-				new Ref("feature", Ref.RefType.Branch, feature)
-		    });
+			RepositoryBuilder builder = new RepositoryBuilder();
+		    Commit root = builder.AddCommit();
+		    Commit middle = builder.AddCommit(root);
+		    Commit master = builder.AddCommit(middle);
+		    Commit feature = builder.AddCommit(middle);
+		    builder.AddBranch("master", master);
+		    builder.AddBranch("feature", feature);
+		    Repository repo = builder.BuildRepository();
 
 		    Repository optimised = GraphOptimiser.GetOptimised(repo.Refs);
 
@@ -104,20 +110,19 @@ namespace GitGraph.Tests
 
 	    [Test]
 	    public void TestCollapseSplitHeadsWithChains()
-	    {
-		    var root = new Commit(1);
-		    var preBranch = new Commit(2, root);
-		    var masterMid = new Commit(3, preBranch);
-		    var featureMid = new Commit(4, preBranch);
-		    var master = new Commit(3, masterMid);
-		    var feature = new Commit(4, featureMid);
-			var repo = new Repository(new List<Ref>
-		    {
-			    new Ref("master", Ref.RefType.Branch, master),
-			    new Ref("feature", Ref.RefType.Branch, feature)
-		    });
+		{
+			RepositoryBuilder builder = new RepositoryBuilder();
+			Commit root = builder.AddCommit();
+		    Commit preBranch = builder.AddCommit(root);
+		    Commit masterMid = builder.AddCommit(preBranch);
+		    Commit featureMid = builder.AddCommit(preBranch);
+		    Commit master = builder.AddCommit(masterMid);
+		    Commit feature = builder.AddCommit(featureMid);
+		    builder.AddBranch("master", master);
+		    builder.AddBranch("feature", feature);
+		    Repository repo = builder.BuildRepository();
 
-		    Repository optimised = GraphOptimiser.GetOptimised(repo.Refs);
+			Repository optimised = GraphOptimiser.GetOptimised(repo.Refs);
 
 		    Commit optimisedMaster = optimised.Refs.ByName("master").Commit;
 		    Assert.That(optimisedMaster, Is.EqualTo(master));
@@ -131,7 +136,7 @@ namespace GitGraph.Tests
 		[Test]
 	    public void TestUnmerged()
 	    {
-		    var repo = new RepositoryImporter(new MockGit()).GetRepository();
+		    Repository repo = new RepositoryImporter(new MockGit()).GetRepository();
 		    Assert.That(
 			    GraphOptimiser.GetUnmergedRefs(repo.Refs).Select(r => r.Name),
 			    Is.EquivalentTo(new[] { "master", "other-branch" }));

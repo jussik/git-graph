@@ -57,7 +57,7 @@ namespace GitGraph
 			IEnumerable<Ref> branches = GetRefs(git.GetBranches(), Ref.RefType.Branch, commitMap);
 			IEnumerable<Ref> tags = GetRefs(git.GetTags(), Ref.RefType.Tag, commitMap);
 
-			return new Repository(branches.Concat(tags));
+			return new Repository(commitMap.Values, branches.Concat(tags));
 		}
 
 		private static IEnumerable<Ref> GetRefs(IEnumerable<string> refs, Ref.RefType refType, Dictionary<BigInteger, Commit> commits)

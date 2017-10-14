@@ -9,6 +9,7 @@ namespace GitGraph
 	public class Repository
 	{
 		public RefCollection Refs { get; }
+		public IReadOnlyList<Commit> Commits { get; }
 		public Dictionary<BigInteger, Commit> CommitsById => commitsById.Value;
 		public ILookup<BigInteger, Commit> CommitChildren => commitChildren.Value;
 
@@ -16,34 +17,21 @@ namespace GitGraph
 		private readonly Lazy<ITrie<Commit>> commitsByPrefix;
 		private readonly Lazy<ILookup<BigInteger, Commit>> commitChildren;
 
-		public Repository(IEnumerable<Ref> refs)
+		public Repository(IEnumerable<Commit> allCommits, IEnumerable<Ref> refs)
 		{
+			Commits = allCommits.ToList();
 			Refs = new RefCollection(this, refs.ToList());
-			commitsById = new Lazy<Dictionary<BigInteger, Commit>>(() =>
-			{
-				var map = new Dictionary<BigInteger, Commit>();
-				var commits = new Stack<Commit>(Refs.All.Select(r => r.Commit));
-				while (commits.TryPop(out Commit commit))
-				{
-					if (map.TryAdd(commit.Id, commit) && commit.Parent != null)
-					{
-						commits.Push(commit.Parent);
-						if (commit.MergeParent != null)
-							commits.Push(commit.MergeParent);
-					}
-				}
-				return map;
-			});
+			commitsById = new Lazy<Dictionary<BigInteger, Commit>>(() => Commits.ToDictionary(c => c.Id));
 			commitsByPrefix = new Lazy<ITrie<Commit>>(() =>
 			{
 				var trie = new PatriciaTrie<Commit>();
-				foreach (Commit commit in CommitsById.Values)
+				foreach (Commit commit in Commits)
 				{
 					trie.Add(commit.ToString(), commit);
 				}
 				return trie;
 			});
-			commitChildren = new Lazy<ILookup<BigInteger, Commit>>(() => CommitsById.Values
+			commitChildren = new Lazy<ILookup<BigInteger, Commit>>(() => Commits
 				.SelectMany(c => c.Parents.Select(p => (parent: p, child: c)))
 				.ToLookup(t => t.parent.Id, t => t.child));
 		}
