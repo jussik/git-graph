@@ -23,9 +23,20 @@ namespace GitGraph
 					.ToArray())
 				.ToList();
 
+			Dictionary<BigInteger, Commit> commitMap = GetCommitMap(commits);
+
+			IEnumerable<Ref> branches = GetRefs(git.GetBranches(), Ref.RefType.Branch, commitMap);
+			IEnumerable<Ref> tags = GetRefs(git.GetTags(), Ref.RefType.Tag, commitMap);
+
+			return new Repository(commitMap.Values, branches.Concat(tags));
+		}
+
+		public static Dictionary<BigInteger, Commit> GetCommitMap(List<BigInteger[]> commits)
+		{
 			ILookup<BigInteger, BigInteger[]> childLookup = commits
 				.SelectMany(c => c.Skip(1).Select(p => (parent: p, commit: c)))
 				.ToLookup(t => t.parent, t => t.commit);
+
 			var commitMap = new Dictionary<BigInteger, Commit>();
 			var remainingCommits = new Queue<BigInteger[]>();
 
@@ -53,11 +64,7 @@ namespace GitGraph
 				else
 					remainingCommits.Enqueue(ids);
 			}
-
-			IEnumerable<Ref> branches = GetRefs(git.GetBranches(), Ref.RefType.Branch, commitMap);
-			IEnumerable<Ref> tags = GetRefs(git.GetTags(), Ref.RefType.Tag, commitMap);
-
-			return new Repository(commitMap.Values, branches.Concat(tags));
+			return commitMap;
 		}
 
 		private static IEnumerable<Ref> GetRefs(IEnumerable<string> refs, Ref.RefType refType, Dictionary<BigInteger, Commit> commits)

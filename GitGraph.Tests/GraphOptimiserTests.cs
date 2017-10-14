@@ -17,9 +17,9 @@ namespace GitGraph.Tests
 		    builder.AddBranch("master", head);
 		    Repository repo = builder.BuildRepository();
 
-		    var grafts = GraphOptimiser.GetChainGrafts(repo.Refs).ToDictionary(g => g.Id, g => g.Parent);
+		    var grafts = GraphOptimiser.GetChainGrafts(repo.Refs).ToDictionary(g => g.Ids[0], g => g.Ids[1]);
 			Assert.That(grafts.Count, Is.EqualTo(1));
-			Assert.That(grafts.GetValueOrDefault(head), Is.EqualTo(root));
+			Assert.That(grafts.GetValueOrDefault(head.Id), Is.EqualTo(root.Id));
 		}
 
 	    [Test]
@@ -60,10 +60,10 @@ namespace GitGraph.Tests
 		    builder.AddBranch("master", head);
 		    Repository repo = builder.BuildRepository();
 
-		    var grafts = GraphOptimiser.GetChainGrafts(repo.Refs).ToDictionary(g => g.Id, g => g.Parent);
-		    Assert.That(grafts.Count, Is.EqualTo(2));
-		    Assert.That(grafts.GetValueOrDefault(a2), Is.EqualTo(root));
-		    Assert.That(grafts.GetValueOrDefault(b2), Is.EqualTo(root));
+		    var grafts = GraphOptimiser.GetChainGrafts(repo.Refs).ToDictionary(g => g.Ids[0], g => g.Ids[1]);
+			Assert.That(grafts.Count, Is.EqualTo(2));
+		    Assert.That(grafts.GetValueOrDefault(a2.Id), Is.EqualTo(root.Id));
+		    Assert.That(grafts.GetValueOrDefault(b2.Id), Is.EqualTo(root.Id));
 		}
 
 	    [Test]
@@ -79,10 +79,10 @@ namespace GitGraph.Tests
 		    builder.AddBranch("b", b2);
 		    Repository repo = builder.BuildRepository();
 
-		    var grafts = GraphOptimiser.GetChainGrafts(repo.Refs).ToDictionary(g => g.Id, g => g.Parent);
-		    Assert.That(grafts.Count, Is.EqualTo(2));
-		    Assert.That(grafts.GetValueOrDefault(a2), Is.EqualTo(root));
-		    Assert.That(grafts.GetValueOrDefault(b2), Is.EqualTo(root));
+		    var grafts = GraphOptimiser.GetChainGrafts(repo.Refs).ToDictionary(g => g.Ids[0], g => g.Ids[1]);
+			Assert.That(grafts.Count, Is.EqualTo(2));
+		    Assert.That(grafts.GetValueOrDefault(a2.Id), Is.EqualTo(root.Id));
+		    Assert.That(grafts.GetValueOrDefault(b2.Id), Is.EqualTo(root.Id));
 		}
 
 	    [Test]
@@ -98,9 +98,9 @@ namespace GitGraph.Tests
 		    builder.AddBranch("master", head);
 		    Repository repo = builder.BuildRepository();
 
-		    var grafts = GraphOptimiser.GetChainGrafts(repo.Refs).ToDictionary(g => g.Id, g => g.Parent);
-		    Assert.That(grafts.Count, Is.EqualTo(1));
-		    Assert.That(grafts.GetValueOrDefault(head), Is.EqualTo(postMerge));
+		    var grafts = GraphOptimiser.GetChainGrafts(repo.Refs).ToDictionary(g => g.Ids[0], g => g.Ids[1]);
+			Assert.That(grafts.Count, Is.EqualTo(1));
+		    Assert.That(grafts.GetValueOrDefault(head.Id), Is.EqualTo(postMerge.Id));
 	    }
 
 		[Test]
@@ -114,9 +114,9 @@ namespace GitGraph.Tests
 		    builder.AddBranch("master", head);
 			Repository repo = builder.BuildRepository();
 
-			var grafts = GraphOptimiser.GetLoopGrafts(repo.Refs).ToDictionary(g => g.Id, g => g.Parent);
+			var grafts = GraphOptimiser.GetLoopGrafts(repo.Refs).ToDictionary(g => g.Ids[0], g => g.Ids[1]);
 			Assert.That(grafts.Count, Is.EqualTo(1));
-			Assert.That(grafts.GetValueOrDefault(head), Is.EqualTo(root));
+			Assert.That(grafts.GetValueOrDefault(head.Id), Is.EqualTo(root.Id));
 		}
 
 	    [Test]
@@ -132,10 +132,28 @@ namespace GitGraph.Tests
 		    builder.AddBranch("master", head);
 		    Repository repo = builder.BuildRepository();
 
-		    var grafts = GraphOptimiser.GetLoopGrafts(repo.Refs).ToDictionary(g => g.Id, g => g.Parent);
-		    Assert.That(grafts.Count, Is.EqualTo(1));
-		    Assert.That(grafts.GetValueOrDefault(head), Is.EqualTo(root));
+		    var grafts = GraphOptimiser.GetLoopGrafts(repo.Refs).ToDictionary(g => g.Ids[0], g => g.Ids[1]);
+			Assert.That(grafts.Count, Is.EqualTo(1));
+		    Assert.That(grafts.GetValueOrDefault(head.Id), Is.EqualTo(root.Id));
 	    }
+
+	    [Test]
+	    public void ApplyGraftTestParent()
+	    {
+			RepositoryBuilder builder = new RepositoryBuilder();
+		    Commit root = builder.AddCommit();
+		    Commit middle = builder.AddCommit(root);
+		    Commit head = builder.AddCommit(middle);
+		    builder.AddBranch("master", head);
+		    Repository repo = builder.BuildRepository();
+
+		    var grafts = new[] {new GraphOptimiser.Graft(head.Id, root.Id)};
+		    var newRepo = GraphOptimiser.ApplyGrafts(repo.Refs, grafts);
+
+		    Commit newHead = newRepo.Refs.ByName("master")?.Commit;
+		    Assert.That(newHead, Is.EqualTo(head));
+			Assert.That(newHead?.Parent, Is.EqualTo(root));
+		}
 
 		[Test]
 	    public void TestCollapseMergeLoopWithChains()

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 
 namespace GitGraph
 {
@@ -13,16 +14,28 @@ namespace GitGraph
 
 	    public class Graft
 	    {
-		    public Commit Id { get; }
-		    public Commit Parent { get; }
-		    public Commit MergeParent { get; }
+		    public BigInteger[] Ids { get; }
 
-		    public Graft(Commit id, Commit parent = null, Commit mergeParent = null)
+		    public Graft(params BigInteger[] ids)
 		    {
-			    Id = id;
-			    Parent = parent;
-			    MergeParent = mergeParent;
+			    Ids = ids;
 		    }
+		}
+
+	    public static Repository ApplyGrafts(RefCollection refs, IEnumerable<Graft> grafts)
+	    {
+		    Dictionary<BigInteger, Graft> graftsById = grafts.ToDictionary(g => g.Ids[0]);
+		    List<BigInteger[]> graftedCommits = refs.Repository.Commits
+			    .Select(c => graftsById.TryGetValue(c.Id, out Graft graft) ? graft.Ids : c.Ids)
+			    .ToList();
+
+		    Dictionary<BigInteger, Commit> newCommits = RepositoryImporter.GetCommitMap(graftedCommits);
+
+		    IEnumerable<Ref> newRefs = refs.All
+				.Select(r => newCommits.TryGetValue(r.Commit.Id, out Commit commit) ? new Ref(r.Name, r.Type, commit) : null)
+			    .Where(r => r != null);
+
+			return new Repository(newCommits.Values, newRefs);
 	    }
 
 		/// <summary>
@@ -81,7 +94,7 @@ namespace GitGraph
 				    if (root != head.Parent)
 				    {
 					    processedHeads.Add(head);
-						yield return new Graft(head, root);
+						yield return new Graft(head.Id, root.Id);
 				    }
 			    }
 		    }

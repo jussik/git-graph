@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+﻿using System;
 using System.Numerics;
 
 namespace GitGraph
@@ -8,25 +8,33 @@ namespace GitGraph
 		public BigInteger Id { get; }
 		public Commit Parent { get; }
 		public Commit MergeParent { get; }
+		public BigInteger[] Ids => ids.Value;
+		public Commit[] Parents => parents.Value;
+
+		private readonly Lazy<BigInteger[]> ids;
+		private readonly Lazy<Commit[]> parents;
 
 		public Commit(BigInteger id, Commit parent = null, Commit mergeParent = null)
 		{
 			Id = id;
 			Parent = parent;
 			MergeParent = mergeParent;
-		}
-
-		public IEnumerable<Commit> Parents
-		{
-			get
+			ids = new Lazy<BigInteger[]>(() =>
 			{
+				if (MergeParent != null)
+					return new[] {Id, Parent.Id, MergeParent.Id};
 				if (Parent != null)
-				{
-					yield return Parent;
-					if (MergeParent != null)
-						yield return MergeParent;
-				}
-			}
+					return new[] {Id, Parent.Id};
+				return new[] {Id};
+			});
+			parents = new Lazy<Commit[]>(() =>
+			{
+				if (MergeParent != null)
+					return new[] {Parent, MergeParent};
+				if (Parent != null)
+					return new[] {Parent};
+				return Array.Empty<Commit>();
+			});
 		}
 
 		public override string ToString() => Id.ToString("x40");
