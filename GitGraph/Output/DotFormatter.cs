@@ -2,7 +2,6 @@
 using System.IO;
 using System.Linq;
 using System.Numerics;
-using GitGraph.Optimisation;
 
 namespace GitGraph.Output
 {
@@ -18,7 +17,7 @@ namespace GitGraph.Output
 		    Repository repo = refs.Repository;
 		    var processedCommits = new HashSet<Commit>();
 		    var processedMerges = new HashSet<(Commit parent, Commit commit)>();
-			var commitQueue = new Queue<Commit>(GraphOptimiser.GetUnmergedRefs(refs)
+			var commitQueue = new Queue<Commit>(CommitUtils.GetUnmergedRefs(refs)
 				.OrderBy(r => r.Name == "master" ? "" : r.Name)
 				.Select(r => r.Commit)
 				.Distinct());

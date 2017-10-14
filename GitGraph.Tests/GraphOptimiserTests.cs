@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
-using GitGraph.Input;
 using GitGraph.Optimisation;
 using NUnit.Framework;
 
@@ -121,15 +120,6 @@ namespace GitGraph.Tests
 		    Commit optimisedFeature = optimised.Refs.ByName("feature").Commit;
 		    Assert.That(optimisedFeature, Is.EqualTo(feature));
 		    Assert.That(optimisedFeature.Parent, Is.EqualTo(preBranch));
-	    }
-
-		[Test]
-	    public void TestUnmerged()
-	    {
-		    Repository repo = new RepositoryImporter(new MockGit()).GetRepository();
-		    Assert.That(
-			    GraphOptimiser.GetUnmergedRefs(repo.Refs).Select(r => r.Name),
-			    Is.EquivalentTo(new[] { "master", "other-branch" }));
 	    }
 	}
 }
