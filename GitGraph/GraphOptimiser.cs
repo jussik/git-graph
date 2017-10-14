@@ -11,17 +11,31 @@ namespace GitGraph
 			throw new NotImplementedException();
 	    }
 
+	    public class Graft
+	    {
+		    public Commit Id { get; }
+		    public Commit Parent { get; }
+		    public Commit MergeParent { get; }
+
+		    public Graft(Commit id, Commit parent = null, Commit mergeParent = null)
+		    {
+			    Id = id;
+			    Parent = parent;
+			    MergeParent = mergeParent;
+		    }
+	    }
+
 		/// <summary>
 		/// Remove unnecessary commits inside chains (successive commits without branches or merges)
 		/// </summary>
 		/// <param name="refs">refs to keep in the reduced repo</param>
 		/// <returns>A map of commits to their new parents (grafts)</returns>
-		public static Dictionary<Commit, Commit> GetChainGrafts(RefCollection refs)
+		public static IEnumerable<Graft> GetChainGrafts(RefCollection refs)
 	    {
 			var whitelist = new HashSet<Commit>(refs.All.Select(r => r.Commit));
 			var checkQueue = new Queue<Commit>(whitelist);
 			var chainHeadQueue = new Queue<Commit>();
-		    var chainHeadsToRoots = new Dictionary<Commit, Commit>();
+			var processedHeads = new HashSet<Commit>();
 
 		    while (checkQueue.Count > 0)
 		    {
@@ -47,7 +61,7 @@ namespace GitGraph
 			    // root is always commit with zero or multiple parents
 			    while (chainHeadQueue.TryDequeue(out Commit head))
 			    {
-				    if (chainHeadsToRoots.ContainsKey(head) || head.Parent == null)
+				    if (processedHeads.Contains(head) || head.Parent == null)
 					    continue;
 
 				    Commit root = head;
@@ -65,14 +79,15 @@ namespace GitGraph
 				    } while (root.Parent != null);
 
 				    if (root != head.Parent)
-					    chainHeadsToRoots.Add(head, root);
+				    {
+					    processedHeads.Add(head);
+						yield return new Graft(head, root);
+				    }
 			    }
 		    }
-
-		    return chainHeadsToRoots;
 	    }
 
-	    public static Dictionary<Commit, Commit> GetLoopGrafts(RefCollection refs)
+	    public static IEnumerable<Graft> GetLoopGrafts(RefCollection refs)
 	    {
 		    throw new NotImplementedException();
 	    }
