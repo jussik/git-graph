@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using NUnit.Framework;
 
 namespace GitGraph.Tests
@@ -7,7 +8,7 @@ namespace GitGraph.Tests
     public class GraphOptimiserTests
     {
 	    [Test]
-	    public void TestCollapseChain()
+	    public void TestChainGraft()
 	    {
 			RepositoryBuilder builder = new RepositoryBuilder();
 			Commit root = builder.AddCommit();
@@ -16,15 +17,94 @@ namespace GitGraph.Tests
 		    builder.AddBranch("master", head);
 		    Repository repo = builder.BuildRepository();
 
-		    Repository optimised = GraphOptimiser.GetOptimised(repo.Refs);
-
-		    Commit optimisedHead = optimised.Refs.All[0].Commit;
-		    Assert.That(optimisedHead, Is.EqualTo(head));
-			Assert.That(optimisedHead.Parent, Is.EqualTo(root));
-	    }
+		    var grafts = GraphOptimiser.GetChainGrafts(repo.Refs);
+			Assert.That(grafts.Count, Is.EqualTo(1));
+			Assert.That(grafts.GetValueOrDefault(head), Is.EqualTo(root));
+		}
 
 	    [Test]
-	    public void TestCollapseMergeLoop()
+	    public void TestIdentityChainNoGraft()
+	    {
+		    RepositoryBuilder builder = new RepositoryBuilder();
+		    Commit root = builder.AddCommit();
+		    Commit head = builder.AddCommit(root);
+		    builder.AddBranch("master", head);
+		    Repository repo = builder.BuildRepository();
+
+		    var grafts = GraphOptimiser.GetChainGrafts(repo.Refs);
+		    Assert.That(grafts.Count, Is.EqualTo(0));
+		}
+
+	    [Test]
+	    public void TestSingleCommitChainNoGraft()
+	    {
+		    RepositoryBuilder builder = new RepositoryBuilder();
+		    Commit head = builder.AddCommit();
+		    builder.AddBranch("master", head);
+		    Repository repo = builder.BuildRepository();
+
+		    var grafts = GraphOptimiser.GetChainGrafts(repo.Refs);
+		    Assert.That(grafts.Count, Is.EqualTo(0));
+	    }
+
+		[Test]
+	    public void TestParallelChainGrafts()
+	    {
+		    RepositoryBuilder builder = new RepositoryBuilder();
+		    Commit root = builder.AddCommit();
+		    Commit a1 = builder.AddCommit(root);
+		    Commit a2 = builder.AddCommit(a1);
+		    Commit b1 = builder.AddCommit(root);
+		    Commit b2 = builder.AddCommit(b1);
+			Commit head = builder.AddCommit(a2, b2);
+		    builder.AddBranch("master", head);
+		    Repository repo = builder.BuildRepository();
+
+		    var grafts = GraphOptimiser.GetChainGrafts(repo.Refs);
+		    Assert.That(grafts.Count, Is.EqualTo(2));
+		    Assert.That(grafts.GetValueOrDefault(a2), Is.EqualTo(root));
+		    Assert.That(grafts.GetValueOrDefault(b2), Is.EqualTo(root));
+		}
+
+	    [Test]
+	    public void TestSplitChainGrafts()
+	    {
+		    RepositoryBuilder builder = new RepositoryBuilder();
+		    Commit root = builder.AddCommit();
+		    Commit a1 = builder.AddCommit(root);
+		    Commit a2 = builder.AddCommit(a1);
+		    Commit b1 = builder.AddCommit(root);
+		    Commit b2 = builder.AddCommit(b1);
+		    builder.AddBranch("a", a2);
+		    builder.AddBranch("b", b2);
+		    Repository repo = builder.BuildRepository();
+
+		    var grafts = GraphOptimiser.GetChainGrafts(repo.Refs);
+		    Assert.That(grafts.Count, Is.EqualTo(2));
+		    Assert.That(grafts.GetValueOrDefault(a2), Is.EqualTo(root));
+		    Assert.That(grafts.GetValueOrDefault(b2), Is.EqualTo(root));
+		}
+
+	    [Test]
+	    public void TestPostMergeChainGrafts()
+	    {
+		    RepositoryBuilder builder = new RepositoryBuilder();
+		    Commit root = builder.AddCommit();
+		    Commit branch1 = builder.AddCommit(root);
+		    Commit branch2 = builder.AddCommit(root);
+		    Commit postMerge = builder.AddCommit(branch1, branch2);
+		    Commit middle = builder.AddCommit(postMerge);
+		    Commit head = builder.AddCommit(middle);
+		    builder.AddBranch("master", head);
+		    Repository repo = builder.BuildRepository();
+
+		    var grafts = GraphOptimiser.GetChainGrafts(repo.Refs);
+		    Assert.That(grafts.Count, Is.EqualTo(1));
+		    Assert.That(grafts.GetValueOrDefault(head), Is.EqualTo(postMerge));
+	    }
+
+		[Test]
+	    public void TestLoopGraft()
 		{
 			RepositoryBuilder builder = new RepositoryBuilder();
 			Commit root = builder.AddCommit();
@@ -34,14 +114,30 @@ namespace GitGraph.Tests
 		    builder.AddBranch("master", head);
 			Repository repo = builder.BuildRepository();
 
-			Repository optimised = GraphOptimiser.GetOptimised(repo.Refs);
-
-			Commit optimisedHead = optimised.Refs.All[0].Commit;
-			Assert.That(optimisedHead, Is.EqualTo(head));
-			Assert.That(optimisedHead.Parent, Is.EqualTo(root));
+			var grafts = GraphOptimiser.GetLoopGrafts(repo.Refs);
+			Assert.That(grafts.Count, Is.EqualTo(1));
+			Assert.That(grafts.GetValueOrDefault(head), Is.EqualTo(root));
 		}
 
 	    [Test]
+	    public void TestMultiLoopGraft()
+	    {
+		    RepositoryBuilder builder = new RepositoryBuilder();
+		    Commit root = builder.AddCommit();
+		    Commit branch1 = builder.AddCommit(root);
+		    Commit branch2 = builder.AddCommit(root);
+		    Commit branch3 = builder.AddCommit(branch2);
+		    Commit merge = builder.AddCommit(branch1, branch2);
+		    Commit head = builder.AddCommit(merge, branch3);
+		    builder.AddBranch("master", head);
+		    Repository repo = builder.BuildRepository();
+
+		    var grafts = GraphOptimiser.GetLoopGrafts(repo.Refs);
+		    Assert.That(grafts.Count, Is.EqualTo(1));
+		    Assert.That(grafts.GetValueOrDefault(head), Is.EqualTo(root));
+	    }
+
+		[Test]
 	    public void TestCollapseMergeLoopWithChains()
 	    {
 			RepositoryBuilder builder = new RepositoryBuilder();
