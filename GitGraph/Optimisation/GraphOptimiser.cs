@@ -17,6 +17,8 @@ namespace GitGraph.Optimisation
 
 		    Dictionary<BigInteger, Commit> graftedCommits = new Grafter(whitelist)
 			    .GraftChains()
+				.GraftLoops()
+			    .GraftChains()
 			    .GetCommitMap(refs.Repository.Commits);
 
 		    PruneCommits(graftedCommits, whitelist);

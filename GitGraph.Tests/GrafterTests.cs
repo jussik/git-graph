@@ -145,7 +145,39 @@ namespace GitGraph.Tests
 			Dictionary<BigInteger, Graft> grafts = new Grafter(repo.Refs.All.Select(r => r.Commit))
 				.GraftLoops().Grafts;
 			Assert.That(grafts.Count, Is.EqualTo(1));
-			Assert.That(grafts.GetValueOrDefault(head.Id)?.Parent, Is.EqualTo(root));
+			Graft headGraft = grafts.GetValueOrDefault(head.Id);
+			Assert.That(headGraft, Is.Not.Null);
+			Assert.That(headGraft.Parent, Is.EqualTo(root));
+			Assert.That(headGraft.MergeParent, Is.Null);
+		}
+
+		[Test]
+		public void TestLoopSequenceGraft()
+		{
+			RepositoryBuilder builder = new RepositoryBuilder();
+			Commit root = builder.AddCommit();
+			Commit branch1 = builder.AddCommit(root);
+			Commit branch2 = builder.AddCommit(root);
+			Commit merge = builder.AddCommit(branch1, branch2);
+			Commit branch3 = builder.AddCommit(merge);
+			Commit branch4 = builder.AddCommit(merge);
+			Commit head = builder.AddCommit(branch3, branch4);
+			builder.AddBranch("master", head);
+			Repository repo = builder.BuildRepository();
+
+			Dictionary<BigInteger, Graft> grafts = new Grafter(repo.Refs.All.Select(r => r.Commit))
+				.GraftLoops().Grafts;
+			Assert.That(grafts.Count, Is.EqualTo(2));
+
+			Graft mergeGraft = grafts.GetValueOrDefault(merge.Id);
+			Assert.That(mergeGraft, Is.Not.Null);
+			Assert.That(mergeGraft.Parent, Is.EqualTo(root));
+			Assert.That(mergeGraft.MergeParent, Is.Null);
+
+			Graft headGraft = grafts.GetValueOrDefault(head.Id);
+			Assert.That(headGraft, Is.Not.Null);
+			Assert.That(headGraft.Parent, Is.EqualTo(merge));
+			Assert.That(headGraft.MergeParent, Is.Null);
 		}
 
 		[Test]
@@ -164,7 +196,7 @@ namespace GitGraph.Tests
 			Dictionary<BigInteger, Graft> grafts = new Grafter(repo.Refs.All.Select(r => r.Commit))
 				.GraftLoops().Grafts;
 			Assert.That(grafts.Count, Is.EqualTo(1));
-			Assert.That(grafts.GetValueOrDefault(head.Id)?.Parent, Is.EqualTo(root));
+			Assert.That(grafts.GetValueOrDefault(merge.Id)?.Parent, Is.EqualTo(root));
 		}
 
 		[Test]

@@ -99,38 +99,66 @@ namespace GitGraph.Optimisation
 
 		public Grafter GraftLoops()
 		{
-			// map commits to following merge commits and if there is a whitelisted commit between them
-			// record all instances where a branch -> merge is duplicated
-			// remove duplicates, keeping any branches with whitelisted commits
-
-			var queue = new Queue<Commit>(whitelist);
+			// if two merge commits share the same previous merge commit, they can be combined
+			var merges = new Queue<Commit>();
 			var processedMerges = new HashSet<Commit>();
-			var nextMerge = new ListLookup<Commit, (Commit merge, bool whitelist)>();
 
-			while (queue.TryDequeue(out Commit merge))
+			Commit GetPreviousMerge(Commit commit, out bool containsWhitelist)
 			{
-				if(processedMerges.Contains(merge))
-					continue;
+				containsWhitelist = false;
+				if (MergeParent(commit) != null)
+					return commit;
 
-				processedMerges.Add(merge);
-
-				bool inWhitelist = false;
-				Commit commit = Parent(merge);
-				if (commit == null)
-					continue;
-
-				do
+				Commit parent;
+				while ((parent = Parent(commit)) != null)
 				{
-					var mergeParent = MergeParent(commit);
-					if (mergeParent != null)
-					{
-						queue.Enqueue(Parent(commit));
-						queue.Enqueue(mergeParent);
-					}
+					commit = parent;
 
-					inWhitelist = inWhitelist || whitelist.Contains(commit);
-					nextMerge.Add(commit, (merge, inWhitelist));
-				} while ((commit = Parent(commit)) != null);
+					Commit mergeParent = MergeParent(commit);
+					if (mergeParent != null)
+						return commit;
+
+					containsWhitelist = containsWhitelist || whitelist.Contains(commit);
+				}
+
+				return commit;
+			}
+
+			// enqueue nearest merge commits to whitelist
+			foreach (Commit commit in whitelist)
+			{
+				Commit merge = GetPreviousMerge(commit, out _);
+				if (merge != null && processedMerges.Add(merge))
+					merges.Enqueue(merge);
+			}
+
+			while (merges.TryDequeue(out Commit merge))
+			{
+				processedMerges.Add(merge);
+				Commit mergeParent = MergeParent(merge);
+				if(mergeParent == null)
+					continue;
+
+				Commit parentMerge = GetPreviousMerge(Parent(merge), out bool parentWhitelist);
+				if(parentMerge == null)
+					continue;
+				if (processedMerges.Add(parentMerge))
+					merges.Enqueue(parentMerge);
+
+				Commit mergeParentMerge = GetPreviousMerge(mergeParent, out bool mergeParentWhitelist);
+				if (mergeParentMerge == null)
+					continue;
+
+				if (mergeParentMerge != parentMerge)
+				{
+					if(processedMerges.Add(mergeParentMerge))
+						merges.Enqueue(mergeParentMerge);
+				}
+				else if (!parentWhitelist || !mergeParentWhitelist)
+				{
+					// previous merges are the same an both do not contain whitelisted commits
+					Grafts.Add(merge.Id, new Graft(merge, mergeParentWhitelist ? mergeParentMerge : parentMerge));
+				}
 			}
 			return this;
 		}
