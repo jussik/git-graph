@@ -17,7 +17,7 @@ namespace GitGraph.Optimisation
 
 		    Dictionary<BigInteger, Commit> graftedCommits = new Grafter(whitelist)
 			    .GraftChains()
-			    .GetCommits(refs.Repository.Commits);
+			    .GetCommitMap(refs.Repository.Commits);
 
 		    PruneCommits(graftedCommits, whitelist);
 
@@ -37,36 +37,30 @@ namespace GitGraph.Optimisation
 	    {
 		    var refsById = new HashSet<Commit>(whitelist);
 
-		    var childCounter = new Dictionary<Commit, List<Commit>>();
+			// linked list because we need memory efficiency and fast remove and there will only be a few elements at most
+			var childCounter = new LinkedListLookup<Commit, Commit>();
 			foreach (Commit commit in commits.Values)
 			{
 				foreach (Commit parent in commit.Parents)
 				{
-					if (!childCounter.TryGetValue(parent, out List<Commit> children))
-					{
-						children = new List<Commit>(1);
-						childCounter.Add(parent, children);
-					}
-
-					children.Add(commit);
+					childCounter.Add(parent, commit);
 				}
 			}
 
-			var danglingQueue = new Queue<Commit>(commits.Values.Where(c => !childCounter.ContainsKey(c)));
+			var danglingQueue = new Queue<Commit>(commits.Values.Where(c => !childCounter.Contains(c)));
 
 		    while (danglingQueue.TryDequeue(out Commit commit))
 		    {
 			    do
 			    {
-				    if (refsById.Contains(commit) || childCounter.ContainsKey(commit))
+				    if (refsById.Contains(commit) || childCounter.Contains(commit))
 					    break;
 
 					commits.Remove(commit.Id);
 
 					foreach (Commit parent in commit.Parents)
 					{
-						if (childCounter.TryGetValue(parent, out List<Commit> children) && children.Remove(commit) && children.Count == 0)
-							childCounter.Remove(parent);
+						childCounter.Remove(parent, commit);
 					}
 
 				    if (commit.MergeParent != null)

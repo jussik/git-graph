@@ -76,9 +76,10 @@ namespace GitGraph.Tests
 		{
 			RepositoryBuilder builder = new RepositoryBuilder();
 			Commit root = builder.AddCommit();
-			Commit a1 = builder.AddCommit(root);
+			Commit preSplit = builder.AddCommit(root);
+			Commit a1 = builder.AddCommit(preSplit);
 			Commit a2 = builder.AddCommit(a1);
-			Commit b1 = builder.AddCommit(root);
+			Commit b1 = builder.AddCommit(preSplit);
 			Commit b2 = builder.AddCommit(b1);
 			builder.AddBranch("a", a2);
 			builder.AddBranch("b", b2);
@@ -178,7 +179,7 @@ namespace GitGraph.Tests
 
 			var grafter = new Grafter(repo.Refs.All.Select(r => r.Commit));
 			grafter.Grafts.Add(head.Id, new Graft(head, root));
-			var newRepo = grafter.GetCommits(repo.Commits);
+			var newRepo = grafter.GetCommitMap(repo.Commits);
 
 			Commit newHead = newRepo.GetValueOrDefault(head.Id);
 			Assert.That(newHead, Is.EqualTo(head));

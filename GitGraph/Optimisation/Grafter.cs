@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 
@@ -20,6 +19,12 @@ namespace GitGraph.Optimisation
 		private Commit Parent(Commit commit) => Grafts.TryGetValue(commit.Id, out Graft graft) ? graft.Parent : commit.Parent;
 		private Commit MergeParent(Commit commit) => Grafts.TryGetValue(commit.Id, out Graft graft) ? graft.MergeParent : commit.MergeParent;
 		private IEnumerable<Commit> Parents(Commit commit) => Grafts.TryGetValue(commit.Id, out Graft graft) ? graft.Commits.Skip(1) : commit.Parents;
+		private BigInteger[] Ids(Commit commit) => Grafts.TryGetValue(commit.Id, out Graft graft) ? graft.Ids : commit.Ids;
+
+		/// <summary>
+		/// Get an unpruned map of new Commits based on a set of source commits
+		/// </summary>
+		public Dictionary<BigInteger, Commit> GetCommitMap(IEnumerable<Commit> commits) => CommitUtils.GetCommitMap(commits.Select(Ids).ToList());
 
 		/// <summary>
 		/// Remove unnecessary commits inside chains (successive commits without branches or merges)
@@ -34,11 +39,11 @@ namespace GitGraph.Optimisation
 			{
 				while (checkQueue.TryDequeue(out Commit commit))
 				{
-					var parent = Parent(commit);
+					Commit parent = Parent(commit);
 					if (parent == null)
 						continue;
 
-					var mergeParent = MergeParent(commit);
+					Commit mergeParent = MergeParent(commit);
 
 					if (mergeParent == null)
 					{
@@ -94,19 +99,40 @@ namespace GitGraph.Optimisation
 
 		public Grafter GraftLoops()
 		{
-			throw new NotImplementedException();
-		}
+			// map commits to following merge commits and if there is a whitelisted commit between them
+			// record all instances where a branch -> merge is duplicated
+			// remove duplicates, keeping any branches with whitelisted commits
 
-		/// <summary>
-		/// Get a map of new Commits based on a set of source commits and grafts
-		/// </summary>
-		public Dictionary<BigInteger, Commit> GetCommits(IEnumerable<Commit> commits)
-		{
-			List<BigInteger[]> graftedCommits = commits
-				.Select(c => Grafts.TryGetValue(c.Id, out Graft graft) ? graft.Ids : c.Ids)
-				.ToList();
+			var queue = new Queue<Commit>(whitelist);
+			var processedMerges = new HashSet<Commit>();
+			var nextMerge = new ListLookup<Commit, (Commit merge, bool whitelist)>();
 
-			return CommitUtils.GetCommitMap(graftedCommits);
+			while (queue.TryDequeue(out Commit merge))
+			{
+				if(processedMerges.Contains(merge))
+					continue;
+
+				processedMerges.Add(merge);
+
+				bool inWhitelist = false;
+				Commit commit = Parent(merge);
+				if (commit == null)
+					continue;
+
+				do
+				{
+					var mergeParent = MergeParent(commit);
+					if (mergeParent != null)
+					{
+						queue.Enqueue(Parent(commit));
+						queue.Enqueue(mergeParent);
+					}
+
+					inWhitelist = inWhitelist || whitelist.Contains(commit);
+					nextMerge.Add(commit, (merge, inWhitelist));
+				} while ((commit = Parent(commit)) != null);
+			}
+			return this;
 		}
 	}
 }

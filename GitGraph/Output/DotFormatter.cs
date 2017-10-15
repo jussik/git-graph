@@ -93,12 +93,11 @@ namespace GitGraph.Output
 		    }
 
 			// ref labels
-			Dictionary<BigInteger, IEnumerable<Ref>> refsById = refs.All
-				.GroupBy(r => r.Commit.Id)
-				.ToDictionary(g => g.Key, g => (IEnumerable<Ref>)g);
+		    ListLookup<BigInteger, Ref> refsById = refs.All
+			    .ToListLookup(r => r.Commit.Id);
 			foreach (Ref r in refs.All)
 			{
-				if (!refsById.TryGetValue(r.Commit.Id, out IEnumerable<Ref> commitRefs))
+				if (!refsById.TryGetValues(r.Commit.Id, out IEnumerable<Ref> commitRefs))
 					continue; // already processed this commit
 
 				AppendCommit(r.Commit, repo, stream);
