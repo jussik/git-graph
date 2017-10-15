@@ -1,5 +1,6 @@
 ﻿using System;
 using GitGraph.Input;
+using GitGraph.Optimisation;
 using GitGraph.Output;
 
 namespace GitGraph
@@ -10,7 +11,8 @@ namespace GitGraph
 		{
 			var dir = args.Length > 0 ? args[0] : Environment.CurrentDirectory;
 			var repo = new RepositoryImporter(new Git(dir)).GetRepository();
-			DotFormatter.ToDigraph(repo.Refs, Console.Out);
+			var repo2 = GraphOptimiser.GetOptimised(repo.Refs);
+			DotFormatter.ToDigraph(repo2.Refs, Console.Out);
 		}
 	}
 }
