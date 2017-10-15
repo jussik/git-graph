@@ -17,6 +17,10 @@ namespace GitGraph.Optimisation
 			Grafts = new Dictionary<BigInteger, Graft>();
 		}
 
+		private Commit Parent(Commit commit) => Grafts.TryGetValue(commit.Id, out Graft graft) ? graft.Parent : commit.Parent;
+		private Commit MergeParent(Commit commit) => Grafts.TryGetValue(commit.Id, out Graft graft) ? graft.MergeParent : commit.MergeParent;
+		private IEnumerable<Commit> Parents(Commit commit) => Grafts.TryGetValue(commit.Id, out Graft graft) ? graft.Commits.Skip(1) : commit.Parents;
+
 		/// <summary>
 		/// Remove unnecessary commits inside chains (successive commits without branches or merges)
 		/// </summary>
@@ -30,10 +34,13 @@ namespace GitGraph.Optimisation
 			{
 				while (checkQueue.TryDequeue(out Commit commit))
 				{
-					if (commit.Parent == null)
+					var parent = Parent(commit);
+					if (parent == null)
 						continue;
 
-					if (commit.MergeParent == null)
+					var mergeParent = MergeParent(commit);
+
+					if (mergeParent == null)
 					{
 						// single parent, may be head of chain
 						chainHeadQueue.Enqueue(commit);
@@ -41,8 +48,8 @@ namespace GitGraph.Optimisation
 					else
 					{
 						// merge commit, check both parents for possible chains
-						checkQueue.Enqueue(commit.Parent);
-						checkQueue.Enqueue(commit.MergeParent);
+						checkQueue.Enqueue(parent);
+						checkQueue.Enqueue(mergeParent);
 					}
 				}
 
@@ -50,26 +57,31 @@ namespace GitGraph.Optimisation
 				// root is always commit with zero or multiple parents
 				while (chainHeadQueue.TryDequeue(out Commit head))
 				{
-					if (processedHeads.Contains(head) || head.Parent == null)
+					if (processedHeads.Contains(head))
 						continue;
 
-					Commit root = head;
+					Commit headParent = Parent(head);
+					Commit rootParent = headParent;
 
+					if (headParent == null)
+						continue;
+
+					Commit root;
 					do
 					{
-						root = root.Parent;
+						root = rootParent;
 
-						if (root.MergeParent != null || whitelist.Contains(root))
+						if (whitelist.Contains(root) || MergeParent(root) != null)
 						{
-							foreach (Commit parent in root.Parents)
+							foreach (Commit parent in Parents(root))
 							{
 								checkQueue.Enqueue(parent);
 							}
 							break;
 						}
-					} while (root.Parent != null);
+					} while ((rootParent = Parent(root)) != null);
 
-					if (root != head.Parent)
+					if (root != headParent)
 					{
 						processedHeads.Add(head);
 						Grafts[head.Id] = new Graft(head, root);
